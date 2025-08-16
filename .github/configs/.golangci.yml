@@ -233,7 +233,7 @@ linters:
   # All available settings of specific linters.
   settings:
     # See the dedicated "linters.settings" documentation section.
-    option: value
+    # option: value # error from github on version 2.1.6
   # Defines a set of rules to ignore issues.
   # It does not skip the analysis, and so does not ignore "typecheck" errors.
   exclusions:
@@ -306,11 +306,11 @@ formatters:
     - gofumpt
     - goimports
     - golines
-    - swaggo
+    # - swaggo # error from github on version 2.1.6
   # Formatters settings.
   settings:
     # See the dedicated "formatters.settings" documentation section.
-    option: value
+    # option: value # error from github on version 2.1.6
   exclusions:
     # Log a warning if an exclusion path is unused.
     # Default: false
