@@ -311,10 +311,10 @@ formatters:
   # settings: # error from github on version 2.1.6
     # See the dedicated "formatters.settings" documentation section.
     # option: value # error from github on version 2.1.6
-  exclusions:
+  # exclusions:
     # Log a warning if an exclusion path is unused.
     # Default: false
-    warn-unused: true
+    # warn-unused: true
     # Mode of the generated files analysis.
     #
     # - `strict`: sources are excluded by strictly following the Go generated file convention.
@@ -325,25 +325,25 @@ formatters:
     # - `disable`: disable the generated files exclusion.
     #
     # Default: lax
-    generated: strict
+    # generated: strict
     # Which file paths to exclude.
     # This option is ignored when using `--stdin` as the path is unknown.
     # Default: []
-    paths:
-      - ".*\\.my\\.go$"
-      - lib/bad.go
+    # paths:
+      # - ".*\\.my\\.go$"
+      # - lib/bad.go
 issues:
   # Maximum issues count per one linter.
   # Set to 0 to disable.
   # Default: 50
-  max-issues-per-linter: 0
+  # max-issues-per-linter: 0
   # Maximum count of issues with the same text.
   # Set to 0 to disable.
   # Default: 3
-  max-same-issues: 0
+  # max-same-issues: 0
   # Make issues output unique by line.
   # Default: true
-  uniq-by-line: false
+  # uniq-by-line: false
   # Show only new issues: if there are unstaged changes or untracked files,
   # only those changes are analyzed, else only changes in HEAD~ are analyzed.
   # It's a super-useful option for integration of golangci-lint into existing large codebase.
@@ -351,100 +351,100 @@ issues:
   # much better don't allow issues in new code.
   #
   # Default: false
-  new: true
+  # new: true
   # Show only new issues created after the best common ancestor (merge-base against HEAD).
   # Default: ""
-  new-from-merge-base: main
+  # new-from-merge-base: main
   # Show only new issues created after git revision `REV`.
   # Default: ""
-  new-from-rev: HEAD
+  # new-from-rev: HEAD
   # Show only new issues created in git patch with set file path.
   # Default: ""
-  new-from-patch: path/to/patch/file
+  # new-from-patch: path/to/patch/file
   # Show issues in any part of update files (requires new-from-rev or new-from-patch).
   # Default: false
-  whole-files: true
+  # whole-files: true
   # Fix found issues (if it's supported by the linter).
   # Default: false
-  fix: true
+  # fix: true
 # Output configuration options.
 output:
   # The formats used to render issues.
   formats:
     # Prints issues in a text format with colors, line number, and linter name.
     # This format is the default format.
-    text:
+    # text:
       # Output path can be either `stdout`, `stderr` or path to the file to write to.
       # Default: stdout
-      path: ./path/to/output.txt
+      # path: ./path/to/output.txt
       # Print linter name in the end of issue text.
       # Default: true
-      print-linter-name: false
+      # print-linter-name: false
       # Print lines of code with issue.
       # Default: true
-      print-issued-lines: false
+      # print-issued-lines: false
       # Use colors.
       # Default: true
-      colors: false
+      # colors: false
     # Prints issues in a JSON representation.
     json:
       # Output path can be either `stdout`, `stderr` or path to the file to write to.
       # Default: stdout
-      path: ./path/to/output.json
+      # path: ./path/to/output.json
     # Prints issues in columns representation separated by tabulations.
-    tab:
+    # tab:
       # Output path can be either `stdout`, `stderr` or path to the file to write to.
       # Default: stdout
-      path: ./path/to/output.txt
+      # path: ./path/to/output.txt
       # Print linter name in the end of issue text.
       # Default: true
-      print-linter-name: true
+      # print-linter-name: true
       # Use colors.
       # Default: true
-      colors: false
+      # colors: false
     # Prints issues in an HTML page.
     # It uses the Cloudflare CDN (cdnjs) and React.
-    html:
+    # html:
       # Output path can be either `stdout`, `stderr` or path to the file to write to.
       # Default: stdout
-      path: ./path/to/output.html
+      # path: ./path/to/output.html
     # Prints issues in the Checkstyle format.
-    checkstyle:
+    # checkstyle:
       # Output path can be either `stdout`, `stderr` or path to the file to write to.
       # Default: stdout
-      path: ./path/to/output.xml
+      # path: ./path/to/output.xml
     # Prints issues in the Code Climate format.
-    code-climate:
+    # code-climate:
       # Output path can be either `stdout`, `stderr` or path to the file to write to.
       # Default: stdout
-      path: ./path/to/output.json
+      # path: ./path/to/output.json
     # Prints issues in the JUnit XML format.
-    junit-xml:
+    # junit-xml:
       # Output path can be either `stdout`, `stderr` or path to the file to write to.
       # Default: stdout
-      path: ./path/to/output.xml
+      # path: ./path/to/output.xml
       # Support extra JUnit XML fields.
       # Default: false
-      extended: true
+      # extended: true
     # Prints issues in the TeamCity format.
-    teamcity:
+    # teamcity:
       # Output path can be either `stdout`, `stderr` or path to the file to write to.
       # Default: stdout
-      path: ./path/to/output.txt
+      # path: ./path/to/output.txt
     # Prints issues in the SARIF format.
-    sarif:
+    # sarif:
       # Output path can be either `stdout`, `stderr` or path to the file to write to.
       # Default: stdout
-      path: ./path/to/output.json
+      # path: ./path/to/output.json
   # Add a prefix to the output file references.
   # This option is ignored when using `output.path-mode: abs` mode.
   # Default: ""
-  path-prefix: ""
+  # path-prefix: ""
   # By default, the report are related to the path obtained by `run.relative-path-mode`.
   # The mode `abs` allows to show absolute file paths instead of relative file paths.
   # The option `output.path-prefix` is ignored when using `abs` mode.
   # Default: ""
-  path-mode: "abs"
+  # path-mode: "abs"
   # Order to use when sorting results.
   # Possible values: `file`, `linter`, and `severity`.
   #
@@ -457,13 +457,13 @@ output:
   # Either they are sorted alphabetically.
   #
   # Default: ["linter", "file"]
-  sort-order:
-    - linter
-    - severity
-    - file # filepath, line, and column.
+  # sort-order:
+    # - linter
+    # - severity
+    # - file # filepath, line, and column.
   # Show statistics per linter.
   # Default: true
-  show-stats: false
+  # show-stats: false
 # Options for analysis running.
 run:
   # Timeout for total work, e.g. 30s, 5m, 5m30s.
@@ -478,13 +478,13 @@ run:
   # - `cfg`: the paths will be relative to the configuration file.
   # - `wd` (NOT recommended): the paths will be relative to the place where golangci-lint is run.
   # Default: cfg
-  relative-path-mode: gomod
+  # relative-path-mode: gomod
   # Exit code when at least one issue was found.
   # Default: 1
-  issues-exit-code: 2
+  # issues-exit-code: 2
   # Include test files or not.
   # Default: true
-  tests: false
+  # tests: false
   # List of build tags, all linters use it.
   # Default: []
   build-tags:
@@ -504,18 +504,18 @@ run:
   # Allow multiple parallel golangci-lint instances running.
   # If false, golangci-lint acquires file lock on start.
   # Default: false
-  allow-parallel-runners: true
+  # allow-parallel-runners: true
   # Allow multiple golangci-lint instances running, but serialize them around a lock.
   # If false, golangci-lint exits with an error if it fails to acquire file lock on start.
   # Default: false
-  allow-serial-runners: true
+  # allow-serial-runners: true
   # Define the Go version limit.
   # Default: use Go version from the go.mod file, fallback on the env var `GOVERSION`, fallback on 1.22.
   go: '1.23'
   # Number of operating system threads (`GOMAXPROCS`) that can execute golangci-lint simultaneously.
   # Default: 0 (automatically set to match Linux container CPU quota and
   # fall back to the number of logical CPUs in the machine)
-  concurrency: 4
+  # concurrency: 4
 severity:
   # Set the default severity for issues.
   #
