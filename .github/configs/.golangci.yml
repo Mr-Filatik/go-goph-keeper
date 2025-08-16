@@ -231,7 +231,7 @@ linters:
     - wsl_v5
     - zerologlint
   # All available settings of specific linters.
-  settings:
+  # settings: # error from github on version 2.1.6
     # See the dedicated "linters.settings" documentation section.
     # option: value # error from github on version 2.1.6
   # Defines a set of rules to ignore issues.
@@ -308,7 +308,7 @@ formatters:
     - golines
     # - swaggo # error from github on version 2.1.6
   # Formatters settings.
-  settings:
+  # settings: # error from github on version 2.1.6
     # See the dedicated "formatters.settings" documentation section.
     # option: value # error from github on version 2.1.6
   exclusions:
