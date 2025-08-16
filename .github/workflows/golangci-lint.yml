@@ -27,7 +27,7 @@ jobs:
         with:
           version: ${{ env.GOLANGCI_LINT_VERSION }}
           args: >
-            --out-format=json
+            --format=json
             --config=.github/configs/.golangci.yml
             --timeout=5m
             --issues-exit-code=1
