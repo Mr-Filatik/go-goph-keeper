@@ -1,6 +1,6 @@
 name: file-changes-labeler
 on:
-  pull_request:
+  pull_request_target:
 
 jobs:
   labeler:
