@@ -23,19 +23,19 @@ const (
 
 // Logger описывает интерфейс для всех логгеров используемых в проекте.
 type Logger interface {
-	// Debug логирует сообщение с уровнем debug.
+	// Debug логирует сообщение и параметры с уровнем debug.
 	Debug(message string, keysAndValues ...any)
 
-	// Info логирует сообщение с уровнем info.
+	// Info логирует сообщение и параметры с уровнем info.
 	Info(message string, keysAndValues ...any)
 
-	// Warn логирует сообщение с уровнем warn и возможной (некритичной) ошибкой.
+	// Warn логирует сообщение и параметры с уровнем warn и возможной (некритичной) ошибкой.
 	Warn(message string, err error, keysAndValues ...any)
 
-	// Error логирует сообщение с уровнем error и критичной ошибкой.
+	// Error логирует сообщение и параметры с уровнем error и критичной ошибкой.
 	Error(message string, err error, keysAndValues ...any)
 
-	// Close (из io.Closer) освобождает ресурсы связанных с логгером.
+	// Close (из io.Closer) освобождает используемые логгером ресурсы.
 	io.Closer
 }
 
@@ -55,5 +55,24 @@ func GetLevelName(logLevel LogLevel) string {
 		return "error"
 	default:
 		return "none"
+	}
+}
+
+// CorrectLevel ограничивает уровень максимально допустимым, если указан неверный.
+//
+// Параметры:
+//   - logLevel: уровень логирования.
+func CorrectLevel(logLevel LogLevel) LogLevel {
+	switch logLevel {
+	case LevelDebug:
+		return LevelDebug
+	case LevelInfo:
+		return LevelInfo
+	case LevelWarn:
+		return LevelWarn
+	case LevelError:
+		return LevelError
+	default:
+		return LevelError
 	}
 }
