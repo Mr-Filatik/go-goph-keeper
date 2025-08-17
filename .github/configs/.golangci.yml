@@ -1,0 +1,393 @@
+version: "2"
+linters:
+  default: all # Default: standard
+  enable:
+    # - arangolint
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - canonicalheader
+    - containedctx
+    - contextcheck
+    - copyloopvar
+    - cyclop
+    - decorder
+    - depguard
+    - dogsled
+    - dupl
+    - dupword
+    - durationcheck
+    # - embeddedstructfieldcheck
+    - err113
+    - errcheck
+    - errchkjson
+    - errname
+    - errorlint
+    - exhaustive
+    - exhaustruct
+    - exptostd
+    - fatcontext
+    - forbidigo
+    - forcetypeassert
+    - funcorder
+    - funlen
+    - ginkgolinter
+    - gocheckcompilerdirectives
+    - gochecknoglobals
+    - gochecknoinits
+    - gochecksumtype
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - godox
+    - goheader
+    - gomoddirectives
+    - gomodguard
+    - goprintffuncname
+    - gosec
+    - gosmopolitan
+    - govet
+    - grouper
+    - iface
+    - importas
+    - inamedparam
+    - ineffassign
+    - interfacebloat
+    - intrange
+    - ireturn
+    - lll
+    - loggercheck
+    - maintidx
+    - makezero
+    - mirror
+    - misspell
+    - mnd
+    - musttag
+    - nakedret
+    - nestif
+    - nilerr
+    - nilnesserr
+    - nilnil
+    - nlreturn
+    - noctx
+    # - noinlineerr
+    - nolintlint
+    - nonamedreturns
+    - nosprintfhostport
+    - paralleltest
+    - perfsprint
+    - prealloc
+    - predeclared
+    - promlinter
+    - protogetter
+    - reassign
+    - recvcheck
+    - revive
+    - rowserrcheck
+    - sloglint
+    - spancheck
+    - sqlclosecheck
+    - staticcheck
+    - tagalign
+    - tagliatelle
+    - testableexamples
+    - testifylint
+    - testpackage
+    - thelper
+    - tparallel
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - usetesting
+    - varnamelen
+    - wastedassign
+    - whitespace
+    - wrapcheck
+    - wsl
+    # - wsl_v5
+    - zerologlint
+  settings:
+    # arangolint:
+    # asasalint:
+    #   ignore-test: false
+    # asciicheck:
+    # bidichk:
+    # bodyclose:
+    # canonicalheader:
+    # containedctx:
+    # contextcheck:
+    # copyloopvar:
+    # cyclop:
+    # decorder:
+    depguard:
+      rules:
+        main:
+          list-mode: original
+          files:
+            - "**/cmd/**/main.go"
+            - "**/cmd/**/main.go"
+          allow:
+            - "github.com/mr-filatik/go-goph-keeper/internal/client"
+            - "github.com/mr-filatik/go-goph-keeper/internal/server"
+          deny: []
+            # - pkg: $gostd
+            #   desc: No using standart libs in cmd main
+            # - pkg: "github.com/pkg/errors"
+            #   desc: Should be replaced by standard lib errors package
+    # dogsled:
+    # dupl:
+    # dupword:
+    # durationcheck:
+    # embeddedstructfieldcheck:
+    # err113:
+    # errcheck:
+    # errchkjson:
+    # errname:
+    # errorlint:
+    # exhaustive:
+    # exhaustruct:
+    # exptostd:
+    # fatcontext:
+    forbidigo:
+      forbid: # Default: ["^(fmt\\.Print(|f|ln)|print|println)$"]
+        - pattern: "^(fmt\\.Print(|f|ln)|print|println)$"
+          msg: Do not use fmt.Print, fmt,Printf and fmt.Println for log output.
+        - pattern: ^print(ln)?$
+          msg: Do not use print() for log output.
+      exclude-godoc-examples: true
+      analyze-types: false
+    # forcetypeassert:
+    # funcorder:
+    # funlen:
+    # ginkgolinter:
+    # gocheckcompilerdirectives:
+    # gochecknoglobals:
+    # gochecknoinits:
+    # gochecksumtype:
+    # gocognit:
+    # goconst:
+    # gocritic:
+    # gocyclo:
+    # godot:
+    # godox:
+    # goheader:
+    # gomoddirectives:
+    # gomodguard:
+    # goprintffuncname:
+    # gosec:
+    # gosmopolitan:
+    # govet:
+    # grouper:
+    # iface:
+    # importas:
+    # inamedparam:
+    # ineffassign:
+    # interfacebloat:
+    # intrange:
+    # ireturn:
+    # lll:
+    # loggercheck:
+    # maintidx:
+    # makezero:
+    # mirror:
+    # misspell:
+    # mnd:
+    # musttag:
+    # nakedret:
+    # nestif:
+    # nilerr:
+    # nilnesserr:
+    # nilnil:
+    # nlreturn:
+    # noctx:
+    # noinlineerr:
+    # nolintlint:
+    # nonamedreturns:
+    # nosprintfhostport:
+    # paralleltest:
+    # perfsprint:
+    # prealloc:
+    # predeclared:
+    # promlinter:
+    # protogetter:
+    # reassign:
+    # recvcheck:
+    # revive:
+    # rowserrcheck:
+    # sloglint:
+    # spancheck:
+    # sqlclosecheck:
+    # staticcheck:
+    # tagalign:
+    # tagliatelle:
+    # testableexamples:
+    # testifylint:
+    # testpackage:
+    # thelper:
+    # tparallel:
+    # unconvert:
+    # unparam:
+    # unused:
+    # usestdlibvars:
+    # usetesting:
+    # varnamelen:
+    # wastedassign:
+    # whitespace:
+    # wrapcheck:
+    # wsl:
+    # wsl_v5:
+    # zerologlint:
+  # exclusions:
+  #   # Mode of the generated files analysis.
+  #   #
+  #   # - `strict`: sources are excluded by strictly following the Go generated file convention.
+  #   #    Source files that have lines matching only the following regular expression will be excluded: `^// Code generated .* DO NOT EDIT\.$`
+  #   #    This line must appear before the first non-comment, non-blank text in the file.
+  #   #    https://go.dev/s/generatedcode
+  #   # - `lax`: sources are excluded if they contain lines like `autogenerated file`, `code generated`, `do not edit`, etc.
+  #   # - `disable`: disable the generated files exclusion.
+  #   #
+  #   # Default: strict
+  #   generated: lax
+  #   # Log a warning if an exclusion rule is unused.
+  #   # Default: false
+  #   warn-unused: true
+  #   # Predefined exclusion rules.
+  #   # Default: []
+  #   presets:
+  #     - comments
+  #     - std-error-handling
+  #     - common-false-positives
+  #     - legacy
+  #   # Excluding configuration per-path, per-linter, per-text and per-source.
+  #   rules:
+  #     # Exclude some linters from running on tests files.
+  #     - path: _test\.go
+  #       linters:
+  #         - gocyclo
+  #         - errcheck
+  #         - dupl
+  #         - gosec
+  #     # Run some linter only for test files by excluding its issues for everything else.
+  #     - path-except: _test\.go
+  #       linters:
+  #         - forbidigo
+  #     # Exclude known linters from partially hard-vendored code,
+  #     # which is impossible to exclude via `nolint` comments.
+  #     # `/` will be replaced by the current OS file path separator to properly work on Windows.
+  #     - path: internal/hmac/
+  #       text: "weak cryptographic primitive"
+  #       linters:
+  #         - gosec
+  #     # Exclude some `staticcheck` messages.
+  #     - linters:
+  #         - staticcheck
+  #       text: "SA9003:"
+  #     # Exclude `lll` issues for long lines with `go:generate`.
+  #     - linters:
+  #         - lll
+  #       source: "^//go:generate "
+  #   # Which file paths to exclude: they will be analyzed, but issues from them won't be reported.
+  #   # "/" will be replaced by the current OS file path separator to properly work on Windows.
+  #   # Default: []
+  #   paths:
+  #     - ".*\\.my\\.go$"
+  #     - lib/bad.go
+  #   # Which file paths to not exclude.
+  #   # Default: []
+  #   paths-except:
+  #     - ".*\\.my\\.go$"
+  #     - lib/bad.go
+formatters:
+  enable: # Default: [] (uses standard Go formatting)
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+    - golines
+    # - swaggo
+  # settings:
+    # option: value
+  # exclusions:
+  #   # Log a warning if an exclusion path is unused.
+  #   # Default: false
+  #   warn-unused: true
+  #   # Mode of the generated files analysis.
+  #   #
+  #   # - `strict`: sources are excluded by strictly following the Go generated file convention.
+  #   #    Source files that have lines matching only the following regular expression will be excluded: `^// Code generated .* DO NOT EDIT\.$`
+  #   #    This line must appear before the first non-comment, non-blank text in the file.
+  #   #    https://go.dev/s/generatedcode
+  #   # - `lax`: sources are excluded if they contain lines like `autogenerated file`, `code generated`, `do not edit`, etc.
+  #   # - `disable`: disable the generated files exclusion.
+  #   #
+  #   # Default: lax
+  #   generated: strict
+  #   # Which file paths to exclude.
+  #   # This option is ignored when using `--stdin` as the path is unknown.
+  #   # Default: []
+  #   paths:
+  #     - ".*\\.my\\.go$"
+  #     - lib/bad.go
+issues:
+  max-issues-per-linter: 50
+  max-same-issues: 3
+  uniq-by-line: true
+  new: false
+  new-from-merge-base: ""
+  new-from-rev: ""
+  new-from-patch: ""
+  whole-files: false
+  fix: false
+output:
+  formats:
+    # text:
+    #   path: stdout
+    #   print-linter-name: true
+    #   print-issued-lines: true
+    #   colors: true
+    json:
+      path: stdout
+    # tab:
+    #   path: stdout
+    #   print-linter-name: true
+    #   colors: true
+    # html:
+    #   path: stdout
+    # checkstyle:
+    #   path: stdout
+    # code-climate:
+    #   path: stdout
+    # junit-xml:
+    #   path: stdout
+    #   extended: false
+    # teamcity:
+    #   path: stdout
+    # sarif:
+    #   path: stdout
+  path-prefix: ""
+  path-mode: ""
+  sort-order: # Default: ["linter", "file"]
+    - linter
+    - severity
+    - file # filepath, line, and column.
+  show-stats: true
+run:
+  timeout: 5m # Default: 0 (disabled)
+  relative-path-mode: gomod # Default: cfg
+  issues-exit-code: 1
+  tests: true
+  build-tags: # Default: []
+    - mytag
+  modules-download-mode: readonly # Default: ""
+  allow-parallel-runners: false
+  allow-serial-runners: false
+  go: '1.23'
+  concurrency: 0
+severity:
+  default: error # Default: ""
+  rules: []

@@ -1,0 +1,37 @@
+github:
+  - changed-files:
+      - any-glob-to-any-file: '.github/**/*'
+
+actions:
+  - changed-files:
+      - any-glob-to-any-file:
+        - '.github/configs/*'
+        - '.github/workflows/*'
+
+migrations:
+  - changed-files:
+      - any-glob-to-any-file: 'migrations/**/*'
+
+utils:
+  - changed-files:
+      - any-glob-to-any-file: 'util/**/*'
+
+client:
+  - changed-files:
+      - any-glob-to-any-file: 'internal/client/**/*'
+
+common:
+  - changed-files:
+      - any-glob-to-any-file: 'internal/common/**/*'
+
+server:
+  - changed-files:
+      - any-glob-to-any-file: 'internal/server/**/*'
+
+go:
+  - changed-files:
+      - any-glob-to-any-file: '**/*.go'
+
+html:
+  - changed-files:
+      - any-glob-to-any-file: '**/*.html'
