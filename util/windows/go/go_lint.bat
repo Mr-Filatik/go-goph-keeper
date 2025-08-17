@@ -1,5 +1,5 @@
 cd ..\..\..\
 
-golangci-lint run
+golangci-lint run --config=.github/configs/.golangci.yml
 
 pause
