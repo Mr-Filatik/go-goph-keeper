@@ -14,11 +14,11 @@ type ZapSugarLogger struct {
 
 var _ Logger = (*ZapSugarLogger)(nil)
 
-// New инициализирует и создаёт новый экземпляр *ZapSugarLogger.
+// NewZapSugarLogger инициализирует и создаёт новый экземпляр *ZapSugarLogger.
 //
 // Параметры:
 //   - logLevel: уровень логирования.
-func New(logLevel LogLevel) (*ZapSugarLogger, error) {
+func NewZapSugarLogger(logLevel LogLevel) (*ZapSugarLogger, error) {
 	zapLog, err := zap.NewDevelopment()
 	if err != nil {
 		return nil, fmt.Errorf("create zap logger error: %w", err)
