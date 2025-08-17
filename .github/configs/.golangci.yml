@@ -203,6 +203,8 @@ linters:
     # nilnesserr:
     # nilnil:
     # nlreturn:
+    nlreturn:
+      block-size: 1
     # noctx:
     # noinlineerr:
     # nolintlint:
