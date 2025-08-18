@@ -26,7 +26,7 @@ jobs:
           go test -coverprofile=coverage.txt ./...
       - name: Generate coverage report
         run: >
-          go tool cover -func=coverage.txt
+          go tool cover -func=coverage.txt &&
           echo "Coverage report generated"
       - name: Check coverage percentage
         run: >
