@@ -26,6 +26,13 @@ type MockLogger struct {
 
 var _ logger.Logger = (*MockLogger)(nil)
 
+// NewMockLogger инициализирует и создаёт новый экземпляр *MockLogger.
+func NewMockLogger() *MockLogger {
+	return &MockLogger{
+		Logs: make([]MockLog, 0),
+	}
+}
+
 // Debug логирует сообщение и параметры в уровне debug.
 //
 // Параметры:

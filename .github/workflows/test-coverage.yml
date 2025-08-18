@@ -1,0 +1,38 @@
+name: test-coverage
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+env:
+  GO_VERSION: '1.23'
+
+jobs:
+  test:
+    name: coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+      - name: Run tests with coverage
+        run: >
+          go test -coverprofile=coverage.txt ./...
+      - name: Generate coverage report
+        run: >
+          go tool cover -func=coverage.txt &&
+          echo "Coverage report generated"
+      - name: Check coverage percentage
+        run: >
+          COV=$(go tool cover -func=coverage.txt | grep total: | grep -o '[0-9]*\.[0-9]*')
+          MIN_COV=60.0
+          
+          awk -v min="$MIN_COV" -v cov="$COV" 'BEGIN { exit !(cov >= min) }' && \
+            echo "✅ Coverage is $COV% (≥ $MIN_COV%)" || \
+            (echo "❌ Coverage $COV% < $MIN_COV%" && exit 1)
