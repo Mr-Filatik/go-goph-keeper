@@ -1,11 +1,15 @@
 // Package server предоставляет функционал для запуска приложения сервера.
 package server
 
-import "github.com/mr-filatik/go-goph-keeper/internal/common/logger"
+import (
+	"os"
+
+	"github.com/mr-filatik/go-goph-keeper/internal/common/logger"
+)
 
 // Run запускает приложение сервера.
 func Run() {
-	log, logErr := logger.NewZapSugarLogger(logger.LevelDebug)
+	log, logErr := logger.NewZapSugarLogger(logger.LevelDebug, os.Stdout)
 	if logErr != nil {
 		panic(logErr)
 	}

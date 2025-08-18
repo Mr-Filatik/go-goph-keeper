@@ -1,15 +1,19 @@
 package logger
 
 import (
-	"fmt"
+	"io"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // ZapSugarLogger реализация логгера через *zap.SugaredLogger.
 type ZapSugarLogger struct {
-	log      *zap.SugaredLogger // логгер
-	logLevel LogLevel           // уровень логирования
+	// Логгер.
+	log *zap.SugaredLogger
+
+	// Уровень логирования.
+	logLevel LogLevel
 }
 
 var _ Logger = (*ZapSugarLogger)(nil)
@@ -18,11 +22,15 @@ var _ Logger = (*ZapSugarLogger)(nil)
 //
 // Параметры:
 //   - logLevel: уровень логирования.
-func NewZapSugarLogger(logLevel LogLevel) (*ZapSugarLogger, error) {
-	zapLog, err := zap.NewDevelopment()
-	if err != nil {
-		return nil, fmt.Errorf("create zap logger error: %w", err)
-	}
+func NewZapSugarLogger(logLevel LogLevel, out io.Writer) (*ZapSugarLogger, error) {
+	encoder := zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig())
+	core := zapcore.NewCore(
+		encoder,
+		zapcore.AddSync(out),
+		zapcore.DebugLevel,
+	)
+
+	zapLog := zap.New(core, zap.AddCaller())
 
 	zslog := &ZapSugarLogger{
 		logLevel: CorrectLevel(logLevel),
@@ -43,7 +51,7 @@ func NewZapSugarLogger(logLevel LogLevel) (*ZapSugarLogger, error) {
 //   - keysAndValues: дополнительные пары ключ-значение.
 func (l *ZapSugarLogger) Debug(msg string, keysAndValues ...any) {
 	if LevelDebug >= l.logLevel {
-		l.log.Infow(msg, keysAndValues...)
+		l.log.Debugw(msg, keysAndValues...)
 	}
 }
 
@@ -67,10 +75,10 @@ func (l *ZapSugarLogger) Info(msg string, keysAndValues ...any) {
 func (l *ZapSugarLogger) Warn(msg string, err error, keysAndValues ...any) {
 	if LevelWarn >= l.logLevel {
 		if err != nil {
-			keysAndValues = append(keysAndValues, []any{"error", err.Error()})
+			keysAndValues = append(keysAndValues, "error", err.Error())
 		}
 
-		l.log.Infow(msg, keysAndValues...)
+		l.log.Warnw(msg, keysAndValues...)
 	}
 }
 
@@ -83,12 +91,12 @@ func (l *ZapSugarLogger) Warn(msg string, err error, keysAndValues ...any) {
 func (l *ZapSugarLogger) Error(msg string, err error, keysAndValues ...any) {
 	if LevelError >= l.logLevel {
 		if err != nil {
-			keysAndValues = append(keysAndValues, []any{"error", err.Error()})
+			keysAndValues = append(keysAndValues, "error", err.Error())
 		} else {
-			keysAndValues = append(keysAndValues, []any{"error", "nil"})
+			keysAndValues = append(keysAndValues, "error", "nil")
 		}
 
-		l.log.Infow(msg, keysAndValues...)
+		l.log.Errorw(msg, keysAndValues...)
 	}
 }
 
