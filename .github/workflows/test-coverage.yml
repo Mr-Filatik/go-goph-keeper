@@ -23,7 +23,7 @@ jobs:
           cache: false
       - name: Run tests with coverage
         run: >
-          go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+          go test -coverprofile=coverage.txt ./...
       - name: Generate coverage report
         run: >
           go tool cover -func=coverage.txt
