@@ -63,7 +63,6 @@ func (s *HTTPServer) Start(ctx context.Context) error {
 
 	tslNextProto := make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0)
 
-	//go:exhaustruct:ignore
 	s.server = &http.Server{
 		Addr: s.address,
 		BaseContext: func(_ net.Listener) context.Context {
