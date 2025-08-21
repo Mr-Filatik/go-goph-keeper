@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/mr-filatik/go-goph-keeper/internal/common/logger"
+	"github.com/mr-filatik/go-goph-keeper/internal/server/handler"
 )
 
 const (
@@ -123,9 +124,10 @@ func (s *HTTPServer) Close() error {
 
 func (s *HTTPServer) registerRoutes() {
 	routers := chi.NewRouter()
+	handler := handler.NewHTTPHandler(s.log)
 
-	routers.Handle("/client", http.HandlerFunc(s.ClientInfo))
-	routers.Handle("/client/{os}", http.HandlerFunc(s.ClientDownload))
+	routers.HandleFunc("/client", handler.ClientInfo)
+	routers.HandleFunc("/client/{os}", handler.ClientDownload)
 
 	s.server.Handler = routers
 }

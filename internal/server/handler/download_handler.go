@@ -1,7 +1,7 @@
-package server
+// Package handler предоставляет функционал для обработчиков запросов.
+package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -13,17 +13,17 @@ import (
 var errUnsupportedOS = errors.New("unsupported OS")
 
 // ClientInfo отдаёт информацию о поддержимаемых OS.
-func (s *HTTPServer) ClientInfo(writer http.ResponseWriter, _ *http.Request) {
+func (h *HTTPHandler) ClientInfo(writer http.ResponseWriter, _ *http.Request) {
 	info := map[string]string{
 		"download": "/client/{os}",
 		"os":       "windows, macos, linux",
 		"example":  "http://localhost:8080/client/linux",
 	}
-	s.serverResponceWithJSON(writer, info)
+	h.responceWithJSON(writer, info)
 }
 
 // ClientDownload отдаёт бинарник CLI-клиента в зависимости от ОС.
-func (s *HTTPServer) ClientDownload(writer http.ResponseWriter, req *http.Request) {
+func (h *HTTPHandler) ClientDownload(writer http.ResponseWriter, req *http.Request) {
 	os := req.PathValue("os")
 
 	var filename, filepath, contentType string
@@ -39,7 +39,7 @@ func (s *HTTPServer) ClientDownload(writer http.ResponseWriter, req *http.Reques
 		filename = "client-linux.exe"
 		contentType = "application/octet-stream"
 	default:
-		s.serverResponceBadRequest(writer, errUnsupportedOS)
+		h.responceBadRequest(writer, errUnsupportedOS)
 
 		return
 	}
@@ -49,12 +49,12 @@ func (s *HTTPServer) ClientDownload(writer http.ResponseWriter, req *http.Reques
 	ok, err := common.ExistsFS(root.EmbedStatic, filepath)
 	if !ok {
 		if err != nil {
-			s.serverResponceInternalServerError(writer, err)
+			h.responceInternalServerError(writer, err)
 
 			return
 		}
 
-		s.serverResponceNotFound(writer, err)
+		h.responceNotFound(writer, err)
 
 		return
 	}
@@ -65,37 +65,4 @@ func (s *HTTPServer) ClientDownload(writer http.ResponseWriter, req *http.Reques
 	writer.Header().Set("Cache-Control", "no-cache")
 
 	http.ServeFile(writer, req, filepath)
-}
-
-func (s *HTTPServer) serverResponceBadRequest(writer http.ResponseWriter, err error) {
-	s.log.Error("Bad request error (code 400)", err)
-	http.Error(writer, "Error: "+err.Error(), http.StatusBadRequest)
-}
-
-func (s *HTTPServer) serverResponceNotFound(writer http.ResponseWriter, err error) {
-	s.log.Error("Bad request error (code 404)", err)
-	http.Error(writer, "Error: "+err.Error(), http.StatusNotFound)
-}
-
-func (s *HTTPServer) serverResponceInternalServerError(writer http.ResponseWriter, err error) {
-	s.log.Error("Internal server error (code 500)", err)
-	http.Error(writer, "Error: "+err.Error(), http.StatusInternalServerError)
-}
-
-func (s *HTTPServer) serverResponceWithJSON(writer http.ResponseWriter, data any) {
-	res, err := json.Marshal(data)
-	if err != nil {
-		s.serverResponceInternalServerError(writer, err)
-
-		return
-	}
-
-	writer.WriteHeader(http.StatusOK)
-
-	_, err = writer.Write(res)
-	if err != nil {
-		s.serverResponceInternalServerError(writer, err)
-
-		return
-	}
 }
