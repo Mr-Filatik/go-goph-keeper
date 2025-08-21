@@ -1,3 +1,4 @@
+// Package server_test предоставляет функционал для тестирования серверов.
 package server_test
 
 import (
