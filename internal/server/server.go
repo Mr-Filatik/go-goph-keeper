@@ -55,5 +55,9 @@ func Run() {
 		log.Error("Server starting error", startErr)
 	}
 
+	// Ожидание сигнала остановки
+	<-exitCtx.Done()
+	exitFn()
+
 	log.Info("Application shutdown starting...")
 }

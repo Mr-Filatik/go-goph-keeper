@@ -24,7 +24,6 @@ const (
 // HTTPServer представляет HTTP-сервер приложения.
 type HTTPServer struct {
 	server  *http.Server  // сервер
-	router  *chi.Mux      // роутер
 	log     logger.Logger // логгер
 	address string        // адрес сервера
 }
@@ -45,7 +44,6 @@ func NewHTTPServer(conf *HTTPServerConfig, log logger.Logger) *HTTPServer {
 	srv := &HTTPServer{
 		server:  nil,
 		address: conf.Address,
-		router:  chi.NewRouter(),
 		log:     log,
 	}
 
@@ -81,6 +79,8 @@ func (s *HTTPServer) Start(ctx context.Context) error {
 		TLSNextProto:                 tslNextProto,
 		WriteTimeout:                 timeoutWrite,
 	}
+
+	s.registerRoutes()
 
 	go func() {
 		if err := s.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -119,4 +119,13 @@ func (s *HTTPServer) Close() error {
 	s.log.Info("HTTPServer close is successful")
 
 	return nil
+}
+
+func (s *HTTPServer) registerRoutes() {
+	routers := chi.NewRouter()
+
+	routers.Handle("/client", http.HandlerFunc(s.ClientInfo))
+	routers.Handle("/client/{os}", http.HandlerFunc(s.ClientDownload))
+
+	s.server.Handler = routers
 }
