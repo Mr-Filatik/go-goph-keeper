@@ -1,7 +1,9 @@
 // Package root содержит функцинальность для работы с файлами проекта.
 package root
 
-import "embed"
+import (
+	"embed"
+)
 
 const (
 	// DirStatic - название каталога с статическими файлами проекта.
