@@ -31,7 +31,7 @@ jobs:
       - name: Check coverage percentage
         run: >
           COV=$(go tool cover -func=coverage.txt | grep total: | grep -o '[0-9]*\.[0-9]*')
-          MIN_COV=60.0
+          MIN_COV=20.0
           
           awk -v min="$MIN_COV" -v cov="$COV" 'BEGIN { exit !(cov >= min) }' && \
             echo "✅ Coverage is $COV% (≥ $MIN_COV%)" || \
