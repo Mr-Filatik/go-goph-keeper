@@ -1,12 +1,25 @@
-// Package handler_test предоставляет функционал для тестирования обработчиков.
-package handler_test
+package client_test
 
 import (
 	"net/http"
 	"testing"
 
 	"github.com/mr-filatik/go-goph-keeper/internal/server/handler"
+	"github.com/mr-filatik/go-goph-keeper/internal/server/handler/client"
+	"github.com/mr-filatik/go-goph-keeper/internal/testutil"
+	"github.com/stretchr/testify/assert"
 )
+
+func TestNewHandler(t *testing.T) {
+	t.Parallel()
+
+	mockLogger := testutil.NewMockLogger()
+
+	mainHandler := handler.NewHandler(nil, mockLogger)
+	clinetHandler := client.NewHandler(*mainHandler)
+
+	assert.NotEmpty(t, clinetHandler)
+}
 
 func TestHTTPHandler_ClientInfo(t *testing.T) {
 	t.Parallel()
@@ -18,7 +31,7 @@ func TestHTTPHandler_ClientInfo(t *testing.T) {
 
 	tests := []struct {
 		name string
-		h    *handler.HTTPHandler
+		h    *client.ClientHandler
 		args args
 	}{}
 
@@ -42,7 +55,7 @@ func TestHTTPHandler_ClientDownload(t *testing.T) {
 
 	tests := []struct {
 		name string
-		h    *handler.HTTPHandler
+		h    *client.ClientHandler
 		args args
 	}{}
 

@@ -1,5 +1,4 @@
-// Package handler предоставляет функционал для обработчиков запросов.
-package handler
+package client
 
 import (
 	"errors"
@@ -8,22 +7,46 @@ import (
 
 	root "github.com/mr-filatik/go-goph-keeper"
 	"github.com/mr-filatik/go-goph-keeper/internal/common"
+	"github.com/mr-filatik/go-goph-keeper/internal/server/handler"
 )
+
+// ClientHandler хранит данные необходимые для обработчиков.
+type ClientHandler struct {
+	handler.Handler
+}
+
+// ClientHandlerOption представляет дополнительные опции для Handler.
+type ClientHandlerOption func(*ClientHandler)
+
+// func WithLogger(l *slog.Logger) Option { return func(h *Handler){ h.log = l } }
+
+// NewHandler создаёт новый экземпляр Handler.
+func NewHandler(hand handler.Handler, opts ...ClientHandlerOption) *ClientHandler {
+	h := &ClientHandler{
+		Handler: hand,
+	}
+
+	for _, o := range opts {
+		o(h)
+	}
+
+	return h
+}
 
 var errUnsupportedOS = errors.New("unsupported OS")
 
 // ClientInfo отдаёт информацию о поддержимаемых OS.
-func (h *HTTPHandler) ClientInfo(writer http.ResponseWriter, _ *http.Request) {
+func (h *ClientHandler) ClientInfo(writer http.ResponseWriter, _ *http.Request) {
 	info := map[string]string{
 		"download": "/client/{os}",
 		"os":       "windows, macos, linux",
 		"example":  "http://localhost:8080/client/linux",
 	}
-	h.responceWithJSON(writer, info)
+	h.ResponceWithJSON(writer, info)
 }
 
 // ClientDownload отдаёт бинарник CLI-клиента в зависимости от ОС.
-func (h *HTTPHandler) ClientDownload(writer http.ResponseWriter, req *http.Request) {
+func (h *ClientHandler) ClientDownload(writer http.ResponseWriter, req *http.Request) {
 	os := req.PathValue("os")
 
 	var filename, filepath, contentType string
@@ -39,7 +62,7 @@ func (h *HTTPHandler) ClientDownload(writer http.ResponseWriter, req *http.Reque
 		filename = "client-linux.exe"
 		contentType = "application/octet-stream"
 	default:
-		h.responceBadRequest(writer, errUnsupportedOS)
+		h.ResponseError(writer, http.StatusBadRequest, errUnsupportedOS)
 
 		return
 	}
@@ -49,12 +72,12 @@ func (h *HTTPHandler) ClientDownload(writer http.ResponseWriter, req *http.Reque
 	ok, err := common.ExistsFS(root.EmbedStatic, filepath)
 	if !ok {
 		if err != nil {
-			h.responceInternalServerError(writer, err)
+			h.ResponseError(writer, http.StatusInternalServerError, err)
 
 			return
 		}
 
-		h.responceNotFound(writer, err)
+		h.ResponseError(writer, http.StatusNotFound, err)
 
 		return
 	}

@@ -9,12 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewHTTPHandler(t *testing.T) {
+func TestNewHandler(t *testing.T) {
 	t.Parallel()
 
 	mockLogger := testutil.NewMockLogger()
 
-	hndlr := handler.NewHTTPHandler(mockLogger)
+	mainHandler := handler.NewHandler(nil, mockLogger)
 
-	assert.NotEmpty(t, hndlr)
+	assert.NotEmpty(t, mainHandler)
 }

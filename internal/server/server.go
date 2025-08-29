@@ -9,6 +9,7 @@ import (
 
 	"github.com/mr-filatik/go-goph-keeper/internal/common"
 	"github.com/mr-filatik/go-goph-keeper/internal/common/logger"
+	"github.com/mr-filatik/go-goph-keeper/internal/server/storage"
 )
 
 // IServer - интерфейс для всех серверов приложения.
@@ -42,13 +43,15 @@ func Run() {
 
 	log.Info("Application starting...")
 
+	stor := storage.NewMemoryStorage()
+
 	var server IServer
 
 	httpConfig := &HTTPServerConfig{
 		Address: "localhost:8080",
 	}
 
-	server = NewHTTPServer(httpConfig, log)
+	server = NewHTTPServer(httpConfig, stor, log)
 
 	startErr := server.Start(exitCtx)
 	if startErr != nil {
