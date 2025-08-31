@@ -4,13 +4,13 @@ package jwt
 import (
 	"errors"
 
-	externaljwt "github.com/golang-jwt/jwt/v5"
+	jwtlib "github.com/golang-jwt/jwt/v5"
 )
 
 // Возможные ошибки при работе с токеном.
 var (
 	ErrTokenInvalid              = errors.New("invalid token")
-	ErrTokenInvalidClaims        = externaljwt.ErrTokenInvalidClaims
+	ErrTokenInvalidClaims        = jwtlib.ErrTokenInvalidClaims
 	ErrTokenInvalidFormat        = errors.New("invalid token format")
-	ErrTokenRequiredClaimMissing = externaljwt.ErrTokenRequiredClaimMissing
+	ErrTokenRequiredClaimMissing = jwtlib.ErrTokenRequiredClaimMissing
 )
