@@ -30,7 +30,7 @@ func NewHandler(stor storage.IStorage, log logger.Logger) *Handler {
 }
 
 func (h *Handler) ResponseError(writer http.ResponseWriter, code int, err error) {
-	msg := fmt.Sprintf("Response error (HTTP code %d)", code)
+	msg := fmt.Sprintf("Response error (HTTP code %d) reason: %s", code, err.Error())
 	h.Log.Error(msg, err)
 	http.Error(writer, "Error", code)
 }
