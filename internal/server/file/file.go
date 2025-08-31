@@ -1,3 +1,4 @@
+// Package file предоставляет функционал для работы с файловой системой.
 package file
 
 import (
@@ -12,15 +13,20 @@ import (
 )
 
 var (
-	ErrFileNotFound      = errors.New("client file not found")
+	// ErrFileNotFound указывает на то, что файл не найден.
+	ErrFileNotFound = errors.New("client file not found")
+
+	// ErrUncorrectClientOS указывает на то, что указанная OC неправильная.
 	ErrUncorrectClientOS = errors.New("uncorrect client os")
 )
 
+// IFileStorage общий интерфейс для всех файловых хранилищ.
 type IFileStorage interface {
 	GetFileInfo(id string) (path string, name string, err error)
 	GetFileData(path, name string) ([]byte, error)
 }
 
+// ClientFileStorage структура для доступа к бинарникам клиентов.
 type ClientFileStorage struct {
 	stor fs.FS
 }
@@ -35,12 +41,24 @@ func NewClientFileStorage(stor fs.FS) *ClientFileStorage {
 }
 
 const (
-	ClientOSLinux   = "linux"
-	ClientOSMacOS   = "macos"
+	// ClientOSLinux описывает операционную систему linux.
+	ClientOSLinux = "linux"
+
+	// ClientOSMacOS описывает операционную систему macos.
+	ClientOSMacOS = "macos"
+
+	// ClientOSWindows описывает операционную систему windows.
 	ClientOSWindows = "windows"
 )
 
-func (s *ClientFileStorage) GetFileInfo(id string) (path string, name string, err error) {
+// GetFileInfo выводит информацию о файле по его уникальному идентификатору.
+// Возвращает путь до файла, название файла с расширением и ошибку.
+//
+// Параметры:
+//   - id: уникальный идентификатор файла.
+func (s *ClientFileStorage) GetFileInfo(id string) (string, string, error) {
+	var name string
+
 	switch id {
 	case ClientOSWindows:
 		name = "client-windows.exe"
@@ -52,7 +70,7 @@ func (s *ClientFileStorage) GetFileInfo(id string) (path string, name string, er
 		return "", "", ErrUncorrectClientOS
 	}
 
-	path = strings.Join([]string{root.DirStatic, "/"}, "")
+	path := strings.Join([]string{root.DirStatic, "/"}, "")
 
 	fullpath := strings.Join([]string{path, name}, "")
 
@@ -65,9 +83,14 @@ func (s *ClientFileStorage) GetFileInfo(id string) (path string, name string, er
 		return "", "", ErrFileNotFound
 	}
 
-	return
+	return path, name, nil
 }
 
+// GetFileData выводит содержимое файла.
+//
+// Параметры:
+//   - path: путь до файла;
+//   - name: имя файла с расширением.
 func (s *ClientFileStorage) GetFileData(path, name string) ([]byte, error) {
 	fullpath := strings.Join([]string{path, name}, "")
 
@@ -77,6 +100,7 @@ func (s *ClientFileStorage) GetFileData(path, name string) ([]byte, error) {
 	}
 
 	var buff []byte
+
 	_, readErr := io.ReadFull(file, buff)
 	if readErr != nil {
 		return nil, fmt.Errorf("read bytes from file: %w", readErr)
