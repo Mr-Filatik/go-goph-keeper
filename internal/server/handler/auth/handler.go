@@ -1,46 +1,47 @@
+// Package auth предоставляет функционал для обработчиков запросов для авторизации.
 package auth
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
-	"time"
 
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/mr-filatik/go-goph-keeper/internal/server/crypto/jwt"
 	"github.com/mr-filatik/go-goph-keeper/internal/server/handler"
 	"github.com/mr-filatik/go-goph-keeper/internal/server/storage"
 	"github.com/mr-filatik/go-goph-keeper/internal/server/storage/entity"
 	"golang.org/x/crypto/bcrypt"
 )
 
-// AuthHandler хранит данные необходимые для обработчиков.
-type AuthHandler struct {
+// Handler хранит данные необходимые для обработчиков.
+type Handler struct {
 	handler.Handler
+	encryptor *jwt.Encryptor
 }
 
-// AuthHandlerOption представляет дополнительные опции для Handler.
-type AuthHandlerOption func(*AuthHandler)
+// HandlerOption представляет дополнительные опции для Handler.
+type HandlerOption func(*Handler)
 
 // func WithLogger(l *slog.Logger) Option { return func(h *Handler){ h.log = l } }
 
 // NewHandler создаёт новый экземпляр Handler.
-func NewHandler(hand handler.Handler, opts ...AuthHandlerOption) *AuthHandler {
-	h := &AuthHandler{
-		Handler: hand,
+func NewHandler(hand handler.Handler, enc *jwt.Encryptor, opts ...HandlerOption) *Handler {
+	authHandler := &Handler{
+		Handler:   hand,
+		encryptor: enc,
 	}
 
-	for _, o := range opts {
-		o(h)
+	for index := range opts {
+		opts[index](authHandler)
 	}
 
-	return h
+	return authHandler
 }
 
 // UserRegister регистрирует нового пользователя.
-func (h *AuthHandler) UserRegister(writer http.ResponseWriter, req *http.Request) {
+func (h *Handler) UserRegister(writer http.ResponseWriter, req *http.Request) {
 	var data registerReq
+
 	err := handler.GetDataFromBodyJSON(req, &data)
 	if err != nil {
 		h.ResponseError(writer, http.StatusBadRequest, err)
@@ -50,17 +51,14 @@ func (h *AuthHandler) UserRegister(writer http.ResponseWriter, req *http.Request
 
 	passHash, hashErr := generatePasswordHash(data.Password)
 	if hashErr != nil {
-		h.ResponseError(writer, http.StatusInternalServerError, err)
+		h.ResponseError(writer, http.StatusInternalServerError, hashErr)
 
 		return
 	}
 
-	user := entity.User{
-		Email:        data.Email,
-		PasswordHash: passHash,
-	}
+	user := entity.NewUser(data.Email, passHash)
 
-	_, addErr := h.Stor.AddNewUser(context.Background(), &user)
+	_, addErr := h.Stor.AddNewUser(req.Context(), user)
 	if addErr != nil {
 		if errors.Is(addErr, storage.ErrEntityAlreadyExists) {
 			h.ResponseError(writer, http.StatusConflict, addErr)
@@ -73,38 +71,39 @@ func (h *AuthHandler) UserRegister(writer http.ResponseWriter, req *http.Request
 		return
 	}
 
-	token, tokenErr := generateToken(user.ID)
+	claims := h.encryptor.CreateClaimsWithUserID(user.ID)
+
+	token, tokenErr := h.encryptor.GenerateTokenString(claims)
 	if tokenErr != nil {
-		h.ResponseError(writer, http.StatusInternalServerError, err)
+		h.ResponseError(writer, http.StatusInternalServerError, tokenErr)
 
 		return
 	}
 
-	_, atErr := h.Stor.AddNewToken(context.Background(), user.ID, &entity.Token{})
+	_, atErr := h.Stor.AddNewToken(req.Context(), user.ID, &entity.Token{})
 	if atErr != nil {
-		h.ResponseError(writer, http.StatusInternalServerError, err)
+		h.ResponseError(writer, http.StatusInternalServerError, atErr)
 
 		return
 	}
 
-	resp := registerResp{
+	h.ResponceWithJSON(writer, registerResp{
 		Token: token,
-	}
-
-	h.ResponceWithJSON(writer, resp)
+	})
 }
 
 // UserLogin авторизует нового пользователя.
-func (h *AuthHandler) UserLogin(writer http.ResponseWriter, req *http.Request) {
+func (h *Handler) UserLogin(writer http.ResponseWriter, req *http.Request) {
 	var data loginReq
-	err := handler.GetDataFromBodyJSON(req, &data)
-	if err != nil {
-		h.ResponseError(writer, http.StatusBadRequest, err)
+
+	dataErr := handler.GetDataFromBodyJSON(req, &data)
+	if dataErr != nil {
+		h.ResponseError(writer, http.StatusBadRequest, dataErr)
 
 		return
 	}
 
-	user, findErr := h.Stor.FindUserByEmail(context.Background(), data.Email)
+	user, findErr := h.Stor.FindUserByEmail(req.Context(), data.Email)
 	if findErr != nil {
 		if errors.Is(findErr, storage.ErrEntityNotFound) {
 			h.ResponseError(writer, http.StatusNotFound, findErr)
@@ -123,49 +122,46 @@ func (h *AuthHandler) UserLogin(writer http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	token, tokenErr := generateToken(user.ID)
+	claims := h.encryptor.CreateClaimsWithUserID(user.ID)
+
+	token, tokenErr := h.encryptor.GenerateTokenString(claims)
 	if tokenErr != nil {
-		h.ResponseError(writer, http.StatusInternalServerError, err)
+		h.ResponseError(writer, http.StatusInternalServerError, tokenErr)
 
 		return
 	}
 
-	_, atErr := h.Stor.AddNewToken(context.Background(), user.ID, &entity.Token{})
+	_, atErr := h.Stor.AddNewToken(req.Context(), user.ID, &entity.Token{})
 	if atErr != nil {
-		h.ResponseError(writer, http.StatusInternalServerError, err)
+		h.ResponseError(writer, http.StatusInternalServerError, atErr)
 
 		return
 	}
 
-	resp := registerResp{
+	h.ResponceWithJSON(writer, loginResp{
 		Token: token,
-	}
-
-	h.ResponceWithJSON(writer, resp)
+	})
 }
 
 // UserLogout убирает авторизацию для пользователя.
-func (h *AuthHandler) UserLogout(writer http.ResponseWriter, req *http.Request) {
-	head := req.Header.Get("Authorization")
+func (h *Handler) UserLogout(writer http.ResponseWriter, req *http.Request) {
+	authToken := req.Header.Get("Authorization")
 
-	if !strings.HasPrefix(strings.ToLower(head), "bearer ") {
-		h.ResponseError(writer, http.StatusUnauthorized, fmt.Errorf("missing bearer token"))
+	token, err := h.encryptor.ValidateTokenBearer(authToken)
+	if err != nil {
+		h.ResponseError(writer, http.StatusUnauthorized, err)
 
 		return
 	}
 
-	tokenStr := strings.TrimSpace(head[len("Bearer "):])
+	userID, userErr := h.encryptor.GetClaimUserIDFromToken(token)
+	if userErr != nil {
+		h.ResponseError(writer, http.StatusBadRequest, userErr)
 
-	token, err := parseToken(tokenStr)
-	if err != nil {
-		h.ResponseError(writer, http.StatusUnauthorized, err)
+		return
 	}
 
-	if !token.Valid {
-		h.ResponseError(writer, http.StatusUnauthorized, fmt.Errorf("bearer token not valid"))
-	}
-
-	//token.Claims.
+	_ = userID
 }
 
 func generatePasswordHash(password string) (string, error) {
@@ -186,33 +182,5 @@ func comparePasswordHash(password, hash string) bool {
 
 	err := bcrypt.CompareHashAndPassword(byteHash, bytePass)
 
-	if err != nil {
-		return false
-	}
-
-	return true
-}
-
-var secretKey = []byte("my_secret_key")
-
-func generateToken(userID string) (string, error) {
-	claims := jwt.MapClaims{
-		"user_id": userID,
-		"exp":     time.Now().Add(time.Hour * 24).Unix(),
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	tokenStr, err := token.SignedString(secretKey)
-	if err != nil {
-		return "", fmt.Errorf("generate toker: %w", err)
-	}
-
-	return tokenStr, nil
-}
-
-func parseToken(tokenString string) (*jwt.Token, error) {
-	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return secretKey, nil
-	})
+	return err == nil
 }

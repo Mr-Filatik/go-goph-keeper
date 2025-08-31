@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/mr-filatik/go-goph-keeper/internal/common/logger"
+	"github.com/mr-filatik/go-goph-keeper/internal/server/crypto/jwt"
 	"github.com/mr-filatik/go-goph-keeper/internal/server/handler"
 	"github.com/mr-filatik/go-goph-keeper/internal/server/handler/auth"
 	"github.com/mr-filatik/go-goph-keeper/internal/server/handler/client"
@@ -27,15 +28,17 @@ const (
 
 // HTTPServer представляет HTTP-сервер приложения.
 type HTTPServer struct {
-	server  *http.Server  // сервер
-	log     logger.Logger // логгер
-	stor    storage.IStorage
-	address string // адрес сервера
+	server    *http.Server // сервер
+	encryptor *jwt.Encryptor
+	log       logger.Logger // логгер
+	stor      storage.IStorage
+	address   string // адрес сервера
 }
 
 // HTTPServerConfig - конфиг для создания HTTPServer.
 type HTTPServerConfig struct {
-	Address string
+	Address   string
+	Encryptor *jwt.Encryptor
 }
 
 // NewHTTPServer создаёт и инициализирует новый экзепляр *HTTPServer.
@@ -47,10 +50,11 @@ func NewHTTPServer(conf *HTTPServerConfig, stor storage.IStorage, log logger.Log
 	log.Info("HTTPServer creating...")
 
 	srv := &HTTPServer{
-		server:  nil,
-		address: conf.Address,
-		stor:    stor,
-		log:     log,
+		server:    nil,
+		encryptor: conf.Encryptor,
+		address:   conf.Address,
+		stor:      stor,
+		log:       log,
 	}
 
 	log.Info("HTTPServer create is successful")
@@ -131,7 +135,7 @@ func (s *HTTPServer) registerRoutes() {
 	routers := chi.NewRouter()
 	mainHandler := handler.NewHandler(s.stor, s.log)
 
-	authHandler := auth.NewHandler(*mainHandler)
+	authHandler := auth.NewHandler(*mainHandler, s.encryptor)
 	routers.HandleFunc("/auth/register", authHandler.UserRegister)
 	routers.HandleFunc("/auth/login", authHandler.UserLogin)
 	routers.HandleFunc("/auth/logout", authHandler.UserLogout)

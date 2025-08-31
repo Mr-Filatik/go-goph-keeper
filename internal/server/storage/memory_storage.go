@@ -6,7 +6,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/google/uuid"
 	"github.com/mr-filatik/go-goph-keeper/internal/server/storage/entity"
 )
 
@@ -32,7 +31,6 @@ func (m *MemoryStorage) AddNewUser(ctx context.Context, user *entity.User) (stri
 		return "", fmt.Errorf("user: %w", ErrEntityAlreadyExists)
 	}
 
-	user.ID = uuid.New().String()
 	m.users[strings.ToLower(user.Email)] = user
 
 	return user.ID, nil

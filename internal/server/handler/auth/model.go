@@ -1,3 +1,4 @@
+// Package auth предоставляет функционал для обработчиков запросов для авторизации.
 package auth
 
 type registerReq struct {
