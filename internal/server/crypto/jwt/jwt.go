@@ -91,7 +91,7 @@ func (e *Encryptor) ValidateTokenBearer(tokenString string) (*jwt.Token, error) 
 // Параметры:
 //   - tokenString: строка с токеном.
 func (e *Encryptor) ValidateToken(tokenString string) (*jwt.Token, error) {
-	token, parseErr := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+	token, parseErr := jwt.Parse(tokenString, func(_ *jwt.Token) (interface{}, error) {
 		return e.secretJWTKey, nil
 	})
 

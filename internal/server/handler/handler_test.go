@@ -9,6 +9,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+/*
+	===== NewHandler =====
+*/
+
 func TestNewHandler(t *testing.T) {
 	t.Parallel()
 

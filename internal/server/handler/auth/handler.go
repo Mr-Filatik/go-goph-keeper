@@ -168,7 +168,6 @@ func generatePasswordHash(password string) (string, error) {
 	bytePass := []byte(password)
 
 	hash, err := bcrypt.GenerateFromPassword(bytePass, bcrypt.DefaultCost)
-
 	if err != nil {
 		return "", fmt.Errorf("generate password: %w", err)
 	}

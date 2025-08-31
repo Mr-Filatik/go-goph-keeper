@@ -4,7 +4,6 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -29,12 +28,14 @@ func NewHandler(stor storage.IStorage, log logger.Logger) *Handler {
 	}
 }
 
+// ResponseError формирует ответ при ошибках сервера и дополнительно логирует ошибку.
 func (h *Handler) ResponseError(writer http.ResponseWriter, code int, err error) {
 	msg := fmt.Sprintf("Response error (HTTP code %d) reason: %s", code, err.Error())
 	h.Log.Error(msg, err)
 	http.Error(writer, "Error", code)
 }
 
+// ResponceWithJSON формирует успешный ответ отправляя данные в формате JSON.
 func (h *Handler) ResponceWithJSON(writer http.ResponseWriter, data any) {
 	res, err := json.Marshal(data)
 	if err != nil {
@@ -53,15 +54,16 @@ func (h *Handler) ResponceWithJSON(writer http.ResponseWriter, data any) {
 	}
 }
 
+// GetDataFromBodyJSON получает данные из запроса в формате JSON.
 func GetDataFromBodyJSON[DataType any](req *http.Request, data *DataType) error {
 	var buf bytes.Buffer
 
 	if _, err := buf.ReadFrom(req.Body); err != nil {
-		return errors.New(err.Error())
+		return fmt.Errorf("read body: %w", err)
 	}
 
 	if err := json.Unmarshal(buf.Bytes(), data); err != nil {
-		return errors.New(err.Error())
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	return nil

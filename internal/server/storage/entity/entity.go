@@ -22,5 +22,4 @@ func NewUser(email, passHash string) *User {
 }
 
 // Token описывает токены для пользователей.
-type Token struct {
-}
+type Token struct{}

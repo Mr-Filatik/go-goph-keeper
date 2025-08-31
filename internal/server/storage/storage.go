@@ -1,3 +1,4 @@
+// Package storage предоставляет функциональность хранилища.
 package storage
 
 import (
@@ -7,6 +8,7 @@ import (
 	"github.com/mr-filatik/go-goph-keeper/internal/server/storage/entity"
 )
 
+// Возможные ошибки при работе с хранилищем.
 var (
 	ErrEntityAlreadyExists = errors.New("entity already exists")
 	ErrEntityNotFound      = errors.New("entity not found")
