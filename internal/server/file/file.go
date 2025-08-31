@@ -94,17 +94,21 @@ func (s *ClientFileStorage) GetFileInfo(id string) (string, string, error) {
 func (s *ClientFileStorage) GetFileData(path, name string) ([]byte, error) {
 	fullpath := strings.Join([]string{path, name}, "")
 
-	file, openError := s.stor.Open(fullpath)
-	if openError != nil {
-		return nil, fmt.Errorf("open file: %w", openError)
+	file, openErr := s.stor.Open(fullpath)
+
+	if openErr != nil {
+		return nil, fmt.Errorf("open file: %w", openErr)
 	}
 
-	var buff []byte
+	closeErr := file.Close()
+	if closeErr != nil {
+		return nil, fmt.Errorf("close file: %w", closeErr)
+	}
 
-	_, readErr := io.ReadFull(file, buff)
+	data, readErr := io.ReadAll(file)
 	if readErr != nil {
 		return nil, fmt.Errorf("read bytes from file: %w", readErr)
 	}
 
-	return buff, nil
+	return data, nil
 }
