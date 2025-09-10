@@ -13,6 +13,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+var (
+	// ErrNotLoginUser показывает что пользователь не авторизован.
+	ErrNotLoginUser = errors.New("user not login")
+
+	// ErrInvalidPassword показывает что введённый пароль не верный.
+	ErrInvalidPassword = errors.New("password not valid")
+)
+
 // Handler хранит данные необходимые для обработчиков.
 type Handler struct {
 	handler.Handler
@@ -117,7 +125,7 @@ func (h *Handler) UserLogin(writer http.ResponseWriter, req *http.Request) {
 	}
 
 	if ok := comparePasswordHash(data.Password, user.PasswordHash); !ok {
-		h.ResponseError(writer, http.StatusUnauthorized, findErr)
+		h.ResponseError(writer, http.StatusUnauthorized, ErrInvalidPassword)
 
 		return
 	}
@@ -149,7 +157,7 @@ func (h *Handler) UserLogout(writer http.ResponseWriter, req *http.Request) {
 
 	token, err := h.encryptor.ValidateTokenBearer(authToken)
 	if err != nil {
-		h.ResponseError(writer, http.StatusUnauthorized, err)
+		h.ResponseError(writer, http.StatusBadRequest, err)
 
 		return
 	}
@@ -161,7 +169,19 @@ func (h *Handler) UserLogout(writer http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	_ = userID
+	isValidToken := h.Stor.IsTokenByUserID(req.Context(), userID)
+	if !isValidToken {
+		h.ResponseError(writer, http.StatusUnauthorized, ErrNotLoginUser)
+
+		return
+	}
+
+	deleteErr := h.Stor.DeleteToken(req.Context(), userID)
+	if !isValidToken {
+		h.ResponseError(writer, http.StatusInternalServerError, deleteErr)
+
+		return
+	}
 }
 
 func generatePasswordHash(password string) (string, error) {
