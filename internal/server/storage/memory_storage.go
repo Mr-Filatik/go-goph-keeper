@@ -54,25 +54,39 @@ func (m *MemoryStorage) FindUserByEmail(_ context.Context, email string) (*entit
 }
 
 // AddNewToken регистрирует новый токен.
-func (m *MemoryStorage) AddNewToken(_ context.Context, _ string, _ *entity.Token) (string, error) {
+func (m *MemoryStorage) AddNewToken(
+	_ context.Context,
+	userID string,
+	token *entity.Token,
+) (string, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+
+	if _, ok := m.tokens[userID]; ok {
+		return "", fmt.Errorf("token: %w", ErrEntityAlreadyExists)
+	}
+
+	m.tokens[userID] = token
 
 	return "", nil
 }
 
 // IsTokenByUserID производит поиск токена для пользователя по UserID.
-func (m *MemoryStorage) IsTokenByUserID(_ context.Context, _ string) bool {
+func (m *MemoryStorage) IsTokenByUserID(_ context.Context, userID string) bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	return false
+	_, ok := m.tokens[userID]
+
+	return ok
 }
 
 // DeleteToken удаляет токен.
-func (m *MemoryStorage) DeleteToken(_ context.Context, _ string) error {
+func (m *MemoryStorage) DeleteToken(_ context.Context, userID string) error {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+
+	delete(m.tokens, userID)
 
 	return nil
 }

@@ -20,6 +20,6 @@ type IStorage interface {
 	FindUserByEmail(ctx context.Context, email string) (*entity.User, error)
 
 	AddNewToken(ctx context.Context, userID string, token *entity.Token) (string, error)
-	IsTokenByUserID(ctx context.Context, userID string) bool
+	IsTokenByUserID(ctx context.Context, userID string) bool // add err for database error
 	DeleteToken(ctx context.Context, userID string) error
 }
