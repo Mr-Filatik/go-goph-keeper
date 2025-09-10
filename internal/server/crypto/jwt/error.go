@@ -9,7 +9,6 @@ import (
 
 // Возможные ошибки при работе с токеном.
 var (
-	ErrTokenInvalid              = errors.New("invalid token")
 	ErrTokenInvalidClaims        = jwtlib.ErrTokenInvalidClaims
 	ErrTokenInvalidFormat        = errors.New("invalid token format")
 	ErrTokenRequiredClaimMissing = jwtlib.ErrTokenRequiredClaimMissing

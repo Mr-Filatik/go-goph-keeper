@@ -9,6 +9,15 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// IEncryptor - интерфейс для работы с токенами.
+type IEncryptor interface {
+	CreateClaimsWithUserID(userID string) jwt.MapClaims
+	GenerateTokenString(claims jwt.MapClaims) (string, error)
+	ValidateTokenBearer(tokenString string) (*jwt.Token, error)
+	ValidateToken(tokenString string) (*jwt.Token, error)
+	GetClaimUserIDFromToken(token *jwt.Token) (string, error)
+}
+
 // Encryptor содержит общие данные для всех хендлеров.
 type Encryptor struct {
 	tockenExpireTime time.Duration
@@ -97,10 +106,6 @@ func (e *Encryptor) ValidateToken(tokenString string) (*jwt.Token, error) {
 
 	if parseErr != nil {
 		return nil, fmt.Errorf("parse token: %w", parseErr)
-	}
-
-	if !token.Valid {
-		return nil, ErrTokenInvalid
 	}
 
 	return token, nil
