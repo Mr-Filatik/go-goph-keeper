@@ -149,7 +149,10 @@ linters:
     # errname:
     # errorlint:
     # exhaustive:
-    # exhaustruct:
+    exhaustruct:
+      exclude:
+        - '(?i)^(?:.*/)?(?:[^.]+\.)?(mock|Mock)\w*$'
+        - '(?i)^(?:.*/)?(?:[^.]+\.)?(fake|Fake)\w*$'
     # exptostd:
     # fatcontext:
     forbidigo:
