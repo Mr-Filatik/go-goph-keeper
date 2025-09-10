@@ -14,6 +14,13 @@ import (
 	"github.com/mr-filatik/go-goph-keeper/internal/server/storage"
 )
 
+//nolint:gochecknoglobals // подстановка линкерных флагов через -ldflags
+var (
+	buildVersion = "N/A" // Версия сборки приложения.
+	buildDate    = "N/A" // Дата сборки приложения.
+	buildCommit  = "N/A" // Коммит сборки приложения.
+)
+
 // IServer - интерфейс для всех серверов приложения.
 type IServer interface {
 	// Запуск сервера.
@@ -45,7 +52,11 @@ func Run() {
 
 	appConfig := config.Initialize()
 
-	log.Info("Application starting...")
+	log.Info("Application starting...",
+		"Build Version", buildVersion,
+		"Build Date", buildDate,
+		"Build Commit", buildCommit,
+	)
 
 	encr := jwt.NewEncryptor(appConfig.CryptoJWTKey)
 
