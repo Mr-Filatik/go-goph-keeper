@@ -9,6 +9,7 @@ import (
 
 	"github.com/mr-filatik/go-goph-keeper/internal/common"
 	"github.com/mr-filatik/go-goph-keeper/internal/common/logger"
+	"github.com/mr-filatik/go-goph-keeper/internal/server/config"
 	"github.com/mr-filatik/go-goph-keeper/internal/server/crypto/jwt"
 	"github.com/mr-filatik/go-goph-keeper/internal/server/storage"
 )
@@ -42,16 +43,18 @@ func Run() {
 		syscall.SIGQUIT)
 	defer exitFn()
 
+	appConfig := config.Initialize()
+
 	log.Info("Application starting...")
 
-	encr := jwt.NewEncryptor("MY_SECRET_KEY")
+	encr := jwt.NewEncryptor(appConfig.CryptoJWTKey)
 
 	stor := storage.NewMemoryStorage()
 
 	var server IServer
 
 	httpConfig := &HTTPServerConfig{
-		Address:   "localhost:8080",
+		Address:   appConfig.ServerAddress,
 		Encryptor: encr,
 	}
 
