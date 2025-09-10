@@ -12,7 +12,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/mr-filatik/go-goph-keeper/internal/common/logger"
+	"github.com/mr-filatik/go-goph-keeper/internal/server/crypto/jwt"
 	"github.com/mr-filatik/go-goph-keeper/internal/server/handler"
+	"github.com/mr-filatik/go-goph-keeper/internal/server/handler/auth"
+	"github.com/mr-filatik/go-goph-keeper/internal/server/handler/client"
+	"github.com/mr-filatik/go-goph-keeper/internal/server/storage"
 )
 
 const (
@@ -24,14 +28,17 @@ const (
 
 // HTTPServer представляет HTTP-сервер приложения.
 type HTTPServer struct {
-	server  *http.Server  // сервер
-	log     logger.Logger // логгер
-	address string        // адрес сервера
+	server    *http.Server // сервер
+	encryptor *jwt.Encryptor
+	log       logger.Logger // логгер
+	stor      storage.IStorage
+	address   string // адрес сервера
 }
 
 // HTTPServerConfig - конфиг для создания HTTPServer.
 type HTTPServerConfig struct {
-	Address string
+	Address   string
+	Encryptor *jwt.Encryptor
 }
 
 // NewHTTPServer создаёт и инициализирует новый экзепляр *HTTPServer.
@@ -39,13 +46,15 @@ type HTTPServerConfig struct {
 // Параметры:
 //   - conf: конфиг сервера;
 //   - log: логгер.
-func NewHTTPServer(conf *HTTPServerConfig, log logger.Logger) *HTTPServer {
+func NewHTTPServer(conf *HTTPServerConfig, stor storage.IStorage, log logger.Logger) *HTTPServer {
 	log.Info("HTTPServer creating...")
 
 	srv := &HTTPServer{
-		server:  nil,
-		address: conf.Address,
-		log:     log,
+		server:    nil,
+		encryptor: conf.Encryptor,
+		address:   conf.Address,
+		stor:      stor,
+		log:       log,
 	}
 
 	log.Info("HTTPServer create is successful")
@@ -124,10 +133,16 @@ func (s *HTTPServer) Close() error {
 
 func (s *HTTPServer) registerRoutes() {
 	routers := chi.NewRouter()
-	handler := handler.NewHTTPHandler(s.log)
+	mainHandler := handler.NewHandler(s.stor, s.log)
 
-	routers.HandleFunc("/client", handler.ClientInfo)
-	routers.HandleFunc("/client/{os}", handler.ClientDownload)
+	authHandler := auth.NewHandler(*mainHandler, s.encryptor)
+	routers.HandleFunc("/auth/register", authHandler.UserRegister)
+	routers.HandleFunc("/auth/login", authHandler.UserLogin)
+	routers.HandleFunc("/auth/logout", authHandler.UserLogout)
+
+	clientHandler := client.NewHandler(*mainHandler)
+	routers.HandleFunc("/client", clientHandler.ClientInfo)
+	routers.HandleFunc("/client/{os}", clientHandler.ClientDownload)
 
 	s.server.Handler = routers
 }
