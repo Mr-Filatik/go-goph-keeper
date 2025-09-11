@@ -9,6 +9,7 @@ import (
 
 	"github.com/mr-filatik/go-goph-keeper/internal/client/client/http/resty"
 	"github.com/mr-filatik/go-goph-keeper/internal/client/config"
+	"github.com/mr-filatik/go-goph-keeper/internal/client/view"
 	"github.com/mr-filatik/go-goph-keeper/internal/common"
 	"github.com/mr-filatik/go-goph-keeper/internal/common/logger"
 )
@@ -56,6 +57,8 @@ func Run() {
 		"Build Date", buildDate,
 		"Build Commit", buildCommit,
 	)
+
+	go view.Start()
 
 	clientConfig := &resty.ClientConfig{
 		ServerAddress: appConfig.ServerAddress,
