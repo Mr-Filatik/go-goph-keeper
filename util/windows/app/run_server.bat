@@ -76,7 +76,12 @@ echo ARGS: !ARGS!
 
 rem --- RUN APP WITH LDFLAGS AND ARGS ---
 
-go run !LDFLAGS! cmd\server\main.go !ARGS!
+set "APP_PATH=cmd\server\main.go"
+
+echo APP_PATH: !APP_PATH!
+echo.
+
+go run !LDFLAGS! !APP_PATH! !ARGS!
 
 endlocal
 
