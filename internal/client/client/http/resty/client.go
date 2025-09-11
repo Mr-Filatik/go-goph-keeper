@@ -1,3 +1,4 @@
+// Package resty предоставляет функционал для работы с клиентом на основе github.com/go-resty/resty/v2.
 package resty
 
 import (
@@ -25,11 +26,13 @@ func NewClient(config *ClientConfig, l logger.Logger) *Client {
 	client := &Client{
 		serverAddress: config.ServerAddress,
 		log:           l,
+		restyClient:   nil,
 	}
 
 	return client
 }
 
+// Start запускает экземпляр Client.
 func (c *Client) Start(_ context.Context) error {
 	c.log.Info(
 		"Start Client...",
@@ -38,27 +41,28 @@ func (c *Client) Start(_ context.Context) error {
 
 	c.restyClient = restylib.New()
 
-	c.log.Info("Start Client is successfull")
+	c.log.Info("Start Client is successful")
+
 	return nil
 }
 
 // Shutdown мягко завершает работу Client.
-func (s *Client) Shutdown(_ context.Context) error {
-	s.log.Info("Client shutdown starting...")
+func (c *Client) Shutdown(_ context.Context) error {
+	c.log.Info("Client shutdown starting...")
 
-	transport, isTransport := s.restyClient.GetClient().Transport.(*http.Transport)
+	transport, isTransport := c.restyClient.GetClient().Transport.(*http.Transport)
 	if isTransport {
 		transport.CloseIdleConnections()
 	}
 
-	s.log.Info("Client shutdown is successful")
+	c.log.Info("Client shutdown is successful")
 
 	return nil
 }
 
 // Close завершает работу Client.
-func (s *Client) Close() error {
-	s.log.Info("Client close not implemented")
+func (c *Client) Close() error {
+	c.log.Info("Client close not implemented")
 
 	return nil
 }
