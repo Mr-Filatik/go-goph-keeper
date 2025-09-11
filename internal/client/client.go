@@ -2,9 +2,14 @@
 package client
 
 import (
+	"context"
 	"os"
+	"os/signal"
+	"syscall"
 
+	"github.com/mr-filatik/go-goph-keeper/internal/client/client/http/resty"
 	"github.com/mr-filatik/go-goph-keeper/internal/client/config"
+	"github.com/mr-filatik/go-goph-keeper/internal/common"
 	"github.com/mr-filatik/go-goph-keeper/internal/common/logger"
 )
 
@@ -14,6 +19,15 @@ var (
 	buildDate    = "N/A" // Дата сборки приложения.
 	buildCommit  = "N/A" // Коммит сборки приложения.
 )
+
+// IClient - интерфейс для всех серверов приложения.
+type IClient interface {
+	// Запуск клиента.
+	common.IStarter
+
+	// Корректная остановка клиента.
+	common.IShutdowner
+}
 
 // Run запускает приложение клиента.
 func Run() {
@@ -28,6 +42,13 @@ func Run() {
 		}
 	}()
 
+	exitCtx, exitFn := signal.NotifyContext(
+		context.Background(),
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT)
+	defer exitFn()
+
 	appConfig := config.Initialize()
 
 	log.Info("Application starting...",
@@ -36,9 +57,20 @@ func Run() {
 		"Build Commit", buildCommit,
 	)
 
-	log.Info("Client starting...")
+	clientConfig := &resty.ClientConfig{
+		ServerAddress: appConfig.ServerAddress,
+	}
 
-	_ = appConfig.ServerAddress
+	mainClient := resty.NewClient(clientConfig, log)
 
-	log.Info("Client startup completed successfully")
+	startErr := mainClient.Start(exitCtx)
+	if startErr != nil {
+		log.Error("Client starting error", startErr)
+	}
+
+	// Ожидание сигнала остановки
+	<-exitCtx.Done()
+	exitFn()
+
+	log.Info("Application shutdown starting...")
 }
