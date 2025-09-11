@@ -30,7 +30,7 @@ func NewZapSugarLogger(logLevel LogLevel, out io.Writer) (*ZapSugarLogger, error
 		zapcore.DebugLevel,
 	)
 
-	zapLog := zap.New(core, zap.AddCaller())
+	zapLog := zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1))
 
 	zslog := &ZapSugarLogger{
 		logLevel: CorrectLevel(logLevel),
