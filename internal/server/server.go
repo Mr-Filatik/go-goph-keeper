@@ -9,8 +9,16 @@ import (
 
 	"github.com/mr-filatik/go-goph-keeper/internal/common"
 	"github.com/mr-filatik/go-goph-keeper/internal/common/logger"
+	"github.com/mr-filatik/go-goph-keeper/internal/server/config"
 	"github.com/mr-filatik/go-goph-keeper/internal/server/crypto/jwt"
 	"github.com/mr-filatik/go-goph-keeper/internal/server/storage"
+)
+
+//nolint:gochecknoglobals // подстановка линкерных флагов через -ldflags
+var (
+	buildVersion = "N/A" // Версия сборки приложения.
+	buildDate    = "N/A" // Дата сборки приложения.
+	buildCommit  = "N/A" // Коммит сборки приложения.
 )
 
 // IServer - интерфейс для всех серверов приложения.
@@ -42,16 +50,22 @@ func Run() {
 		syscall.SIGQUIT)
 	defer exitFn()
 
-	log.Info("Application starting...")
+	appConfig := config.Initialize()
 
-	encr := jwt.NewEncryptor("MY_SECRET_KEY")
+	log.Info("Application starting...",
+		"Build Version", buildVersion,
+		"Build Date", buildDate,
+		"Build Commit", buildCommit,
+	)
+
+	encr := jwt.NewEncryptor(appConfig.CryptoJWTKey)
 
 	stor := storage.NewMemoryStorage()
 
 	var server IServer
 
 	httpConfig := &HTTPServerConfig{
-		Address:   "localhost:8080",
+		Address:   appConfig.ServerAddress,
 		Encryptor: encr,
 	}
 
