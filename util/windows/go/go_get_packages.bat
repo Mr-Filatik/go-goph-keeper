@@ -1,5 +1,8 @@
 cd ..\..\..\
 
+go get github.com/charmbracelet/bubbles@v0.20.0
+go get github.com/charmbracelet/bubbles/textinput@v0.20.0
+go get github.com/charmbracelet/bubbletea@v1.3.7
 go get github.com/go-chi/chi/v5@v5.2.3
 go get github.com/go-resty/resty/v2@v2.16.5
 go get github.com/golang-jwt/jwt/v5@v5.3.0
