@@ -1,39 +1,72 @@
 package view
 
 import (
-	"fmt"
-
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 type LoginScreen struct {
-	mainModel *model
-	Index     int
-	Items     []string
+	mainModel     *model
+	LoginInput    textinput.Model
+	PasswordInput textinput.Model
+	ErrMessage    string
 }
 
 func NewLoginScreen(mod *model) *LoginScreen {
+	// login input
+	loginInput := textinput.New()
+	loginInput.Placeholder = "your email"
+	loginInput.CharLimit = 64
+	loginInput.Focus()
+
+	// password inputs
+	passInput := textinput.New()
+	passInput.Placeholder = "your password"
+	passInput.CharLimit = 64
+	passInput.EchoMode = textinput.EchoPassword
+	passInput.EchoCharacter = '•'
+
 	return &LoginScreen{
-		mainModel: mod,
-		Index:     0,
-		Items: []string{
-			"Login",
-			"Register",
-			"Quit",
-		},
+		mainModel:     mod,
+		LoginInput:    loginInput,
+		PasswordInput: passInput,
+		ErrMessage:    "",
 	}
 }
 
+func (s *LoginScreen) LoadScreen(fnc func()) IScreen {
+	// login input
+	loginInput := textinput.New()
+	loginInput.Placeholder = "your email"
+	loginInput.CharLimit = 64
+	loginInput.Focus()
+
+	// password inputs
+	passInput := textinput.New()
+	passInput.Placeholder = "your password"
+	passInput.CharLimit = 64
+	passInput.EchoMode = textinput.EchoPassword
+	passInput.EchoCharacter = '•'
+
+	s.LoginInput = loginInput
+	s.PasswordInput = passInput
+	s.ErrMessage = ""
+
+	if fnc != nil {
+		fnc()
+	}
+
+	return s
+}
+
 func (s *LoginScreen) String() string {
-	view := "\n[Login] Select action:\n"
+	view := "\n[Login] Enter email and password:\n"
 
-	for index := range s.Items {
-		cursor := " "
-		if index == s.Index {
-			cursor = ">"
-		}
+	view += s.LoginInput.View() + "\n"
+	view += s.PasswordInput.View() + "\n\n"
 
-		view += fmt.Sprintf("%s %s\n", cursor, s.Items[index])
+	if s.ErrMessage != "" {
+		view += "\n[ERROR]: " + s.ErrMessage + "\n"
 	}
 
 	return view
@@ -41,61 +74,57 @@ func (s *LoginScreen) String() string {
 
 func (s *LoginScreen) GetHints() []Hint {
 	return []Hint{
-		{"Select", []string{KeyEnter}},
-		{"Switch", []string{KeyTab}},
-		{"Next", []string{KeyDown, KeyDownWASD, KeyNext}},
-		{"Previous", []string{KeyUp, KeyUpWASD, KeyPrev}},
-		{"Quit", []string{KeyEscape, KeyEscapeShort, KeyQuit, KeyQuitShort}},
+		{"Login", []string{KeyEnter}},
+		{"Switch", []string{KeyTab, KeyDown, KeyUp}},
+		{"Back", []string{KeyEscape}},
+		{"Quit", []string{KeyQuit}},
 	}
 }
 
 func (s *LoginScreen) Action(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch key.String() {
-	case KeyEscape, KeyEscapeShort, KeyQuit, KeyQuitShort:
+	case KeyQuit:
 		return s.mainModel, tea.Quit
 
+	case KeyEscape:
+		s.mainModel.screenCurrent = s.mainModel.screenStart.LoadScreen(nil)
+
+		return s.mainModel, nil
+
 	case KeyEnter:
-		if s.Items[s.Index] == "Login" {
-			s.mainModel.screenCurrent = s.mainModel.screenLogin
+		if s.LoginInput.Value() == "" || s.PasswordInput.Value() == "" {
+			s.ErrMessage = "login and password are required"
 
 			return s.mainModel, nil
 		}
 
-		if s.Items[s.Index] == "Register" {
-			s.mainModel.screenCurrent = s.mainModel.screenRegister
-
-			return s.mainModel, nil
-		}
-
-		if s.Items[s.Index] == "Quit" {
-			return s.mainModel, tea.Quit
-		}
+		s.mainModel.screenCurrent = s.mainModel.screenPassList.LoadScreen(func() {
+			s.mainModel.currentUser = &user{
+				Login: s.LoginInput.Value(),
+			}
+		})
+		// s.ErrMessage = "happy (" + s.LoginInput.Value() + ") (" + s.PasswordInput.Value() + ")"
 
 		return s.mainModel, nil
 
-	case KeyTab:
-		if s.Index < len(s.Items)-1 {
-			s.Index++
+	case KeyTab, KeyDown, KeyUp:
+		if s.LoginInput.Focused() {
+			s.LoginInput.Blur()
+			s.PasswordInput.Focus()
 		} else {
-			s.Index = 0
-		}
-
-		return s.mainModel, nil
-
-	case KeyUp, KeyUpWASD, KeyPrev:
-		if s.Index > 0 {
-			s.Index--
-		}
-
-		return s.mainModel, nil
-
-	case KeyDown, KeyDownWASD, KeyNext:
-		if s.Index < len(s.Items)-1 {
-			s.Index++
+			s.PasswordInput.Blur()
+			s.LoginInput.Focus()
 		}
 
 		return s.mainModel, nil
 	}
 
-	return s.mainModel, nil
+	var cmd tea.Cmd
+	if s.LoginInput.Focused() {
+		s.LoginInput, cmd = s.LoginInput.Update(key)
+	} else {
+		s.PasswordInput, cmd = s.PasswordInput.Update(key)
+	}
+
+	return s.mainModel, cmd
 }

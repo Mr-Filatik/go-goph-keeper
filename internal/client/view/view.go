@@ -5,28 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 )
-
-type screen int
-
-const (
-	screenStart screen = iota
-	screenLogin
-	screenRegister
-	screenLoading
-	screenPasswordList
-	screenPasswordDetails
-)
-
-type item struct {
-	Title       string
-	Description string
-	Username    string
-	Password    string // never display; only copy on request
-	Notes       string
-}
 
 type availableAction struct {
 	name    string
@@ -34,8 +14,7 @@ type availableAction struct {
 }
 
 type model struct {
-	currentScreen screen
-	currentUser   string // current user email
+	currentUser *user
 
 	// global/app info always shown in header
 	appName      string
@@ -43,67 +22,32 @@ type model struct {
 	buildDate    string
 	buildCommit  string
 
-	// login inputs
-	loginInput    textinput.Model
-	passwordInput textinput.Model
-	loginErr      string
-
-	availableActions []availableAction
-	indexInput       int // индекс для выборов в меню (один на разные окна/обнуляется при переходе)
-
 	// loading screen data
 	loadingInfo    string
 	loadingPercent float64
 
-	// data
-	items     []item
-	listIndex int
-	selected  *item
-	statusMsg string // ephemeral footer message
-
-	screenCurrent  IScreen
-	screenStart    *StartScreen
-	screenLogin    *LoginScreen
-	screenRegister *RegisterScreen
+	screenCurrent     IScreen
+	screenStart       *StartScreen
+	screenLogin       *LoginScreen
+	screenRegister    *RegisterScreen
+	screenPassList    *PasswordListScreen
+	screenPassDetails *PasswordDetailsScreen
 }
 
 func initialModel() model {
-	// login input
-	loginInput := textinput.New()
-	loginInput.Placeholder = "email or login"
-	loginInput.CharLimit = 64
-	loginInput.Focus()
-
-	// password inputs
-	passInput := textinput.New()
-	passInput.Placeholder = "password"
-	passInput.CharLimit = 64
-	passInput.EchoMode = textinput.EchoPassword
-	passInput.EchoCharacter = '•'
-
-	// sample data (replace with your backend later)
-	data := []item{
-		{"GitHub", "Personal account", "vlad", "ghp_example_password", "2FA: TOTP in Authy"},
-		{"GMail", "Work", "vladislav", "gmail_app_password", "App password only"},
-		{"AWS", "Prod account", "admin", "supersecretkey", "Use IAM roles"},
-	}
-
 	mod := &model{
-		currentScreen: screenStart,
-		appName:       "AppName",
-		buildVersion:  "Version",
-		buildDate:     "Build",
-		buildCommit:   "Commit",
-		currentUser:   "user",
-		loginInput:    loginInput,
-		passwordInput: passInput,
-		items:         data,
-		listIndex:     0,
+		appName:      "AppName",
+		buildVersion: "Version",
+		buildDate:    "Build",
+		buildCommit:  "Commit",
+		currentUser:  nil,
 	}
 
 	mod.screenStart = NewStartScreen(mod)
 	mod.screenLogin = NewLoginScreen(mod)
 	mod.screenRegister = NewRegisterScreen(mod)
+	mod.screenPassList = NewPasswordListScreen(mod)
+	mod.screenPassDetails = NewPasswordDetailsScreen(mod)
 
 	mod.screenCurrent = mod.screenStart
 
@@ -112,184 +56,40 @@ func initialModel() model {
 
 func (m model) Init() tea.Cmd { return nil }
 
+// Кнопки для управления UI.
 const (
-	KeyUp     = "up"
-	KeyUpWASD = "w"
+	// Элементы управления.
+	KeyTab  = "tab"
+	KeyUp   = "up"
+	KeyDown = "down"
 
-	KeyDown     = "down"
-	KeyDownWASD = "s"
-
-	KeyNext = "n"
-	KeyPrev = "p"
-
-	KeyTab = "tab"
-
+	// Элементы действий.
 	KeyEnter = "enter"
+	KeyCopy  = "ctrl+c"
 
-	KeyEscape      = "esc"
-	KeyEscapeShort = "b"
-
-	KeyQuit      = "ctrl+c"
-	KeyQuitShort = "q"
-
-	KeyCopy = "c"
+	// Элементы для выхода.
+	KeyEscape = "esc"
+	KeyQuit   = "ctrl+q"
 )
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	if key, isKey := msg.(tea.KeyMsg); isKey {
 		if m.screenCurrent != nil {
-			return m.screenCurrent.Action(msg)
+			return m.screenCurrent.Action(key)
 		}
-
-		// switch m.currentScreen {
-		// case screenLogin:
-		// 	switch msg.String() {
-		// 	case KeyQuit, KeyQuitShort, KeyEscape:
-		// 		return m, tea.Quit
-		// 	case KeyTab:
-		// 		if m.loginInput.Focused() {
-		// 			m.loginInput.Blur()
-		// 			m.passwordInput.Focus()
-		// 		} else {
-		// 			m.passwordInput.Blur()
-		// 			m.loginInput.Focus()
-		// 		}
-		// 		return m, nil
-		// 	case KeyEnter:
-		// 		// TODO: replace with real auth
-		// 		if m.loginInput.Value() == "" || m.passwordInput.Value() == "" {
-		// 			m.loginErr = "login and password are required"
-		// 			return m, nil
-		// 		}
-		// 		m.currentScreen = screenPasswordList
-		// 		m.statusMsg = "Logged in"
-		// 		m.loginErr = ""
-		// 		return m, nil
-		// 	}
-		// 	// delegate typing to inputs
-		// 	var cmd tea.Cmd
-		// 	if m.loginInput.Focused() {
-		// 		m.loginInput, cmd = m.loginInput.Update(msg)
-		// 	} else {
-		// 		m.passwordInput, cmd = m.passwordInput.Update(msg)
-		// 	}
-		// 	return m, cmd
-
-		// case screenPasswordList:
-		// 	switch msg.String() {
-		// 	case KeyQuit, KeyQuitShort:
-		// 		return m, tea.Quit
-		// 	case KeyUp, KeyUpWASD:
-		// 		if m.listIndex > 0 {
-		// 			m.listIndex--
-		// 		}
-		// 		return m, nil
-		// 	case KeyDown, KeyDownWASD:
-		// 		if m.listIndex < len(m.items)-1 {
-		// 			m.listIndex++
-		// 		}
-		// 		return m, nil
-		// 	case KeyEnter:
-		// 		m.selected = &m.items[m.listIndex]
-		// 		m.currentScreen = screenPasswordDetails
-		// 		m.statusMsg = "Opened details"
-		// 		return m, nil
-		// 	}
-
-		// case screenPasswordDetails:
-		// 	switch msg.String() {
-		// 	case KeyQuit, KeyQuitShort:
-		// 		return m, tea.Quit
-		// 	case KeyEscape, KeyEscapeShort:
-		// 		m.currentScreen = screenPasswordList
-		// 		m.selected = nil
-		// 		m.statusMsg = "Back to list"
-		// 		return m, nil
-		// 	case KeyCopy:
-		// 		if m.selected != nil {
-		// 			_ = clipboard.WriteAll(m.selected.Password)
-		// 			m.statusMsg = "Password copied to clipboard"
-		// 		}
-		// 		return m, nil
-		// 	}
-		// }
 	}
 
 	return m, nil
 }
 
 func (m model) View() string {
-	view := m.header() // вынести подсказки как header [Enter] Select [Tab/Up/Down/N/P/W/S] Switch [Esc/Q/B/Ctrl+C] Quit\n\n
-	// записывать их в отдельную переменную (действие и []кнопок)
+	view := m.header()
 
 	if m.screenCurrent != nil {
 		view += m.screenCurrent.String()
 	}
 
-	// switch m.currentScreen {
-	// case screenStart:
-	// 	view += m.screenStart.String() // переделать на текущее окно
-	// case screenLogin:
-	// 	view += m.viewLoginScreen()
-	// case screenPasswordList:
-	// 	view += m.viewPasswordListScreen()
-	// case screenPasswordDetails:
-	// 	view += m.viewPasswordDetailsScreen()
-	// }
-
 	view += "\n" + m.footer() + "\n"
-
-	return view
-}
-
-func (m model) viewLoginScreen() string {
-	view := "Login\n"
-	view += m.loginInput.View() + "\n"
-	view += m.passwordInput.View() + "\n\n"
-	view += "[Enter] Sign in [Tab] Switch field [Esc/Ctrl+C] Quit\n"
-
-	if m.loginErr != "" {
-		view += "\nERROR: " + m.loginErr + "\n"
-	}
-
-	return view
-}
-
-func (m model) viewRegisterScreen() string {
-	return ""
-}
-
-func (m model) viewPasswordListScreen() string {
-	view := "Passwords (Up/Down, Enter=Open, q=Quit)\n\n"
-
-	for i, item := range m.items {
-		cursor := " "
-		if i == m.listIndex {
-			cursor = ">"
-		}
-
-		view += fmt.Sprintf("%s %s — %s\n", cursor, item.Title, item.Description)
-	}
-
-	return view
-}
-
-func (m model) viewPasswordDetailsScreen() string {
-	var view string
-
-	if m.selected != nil {
-		item := *m.selected
-		view := fmt.Sprintf("%s\n%s\n\n", item.Title, item.Description)
-		view += fmt.Sprintf("Username: %s\n", item.Username)
-		view += "Password: [hidden] (press 'c' to copy)\n"
-
-		if item.Notes != "" {
-			view += "Notes: " + item.Notes + "\n"
-		}
-
-		view += "\n[b] Back [c] Copy password [q] Quit\n"
-	}
 
 	return view
 }
@@ -302,11 +102,12 @@ const (
 func (m model) header() string {
 	parts := []string{
 		addLine(),
-		m.appName,
 	}
 
-	if m.currentUser != "" {
-		parts = append(parts, "User: "+m.currentUser)
+	if m.currentUser != nil {
+		parts = append(parts, m.appName+" [User] Login: "+m.currentUser.Login+".")
+	} else {
+		parts = append(parts, m.appName)
 	}
 
 	parts = append(parts, addLine(), "Hints:")
@@ -314,11 +115,12 @@ func (m model) header() string {
 	if m.screenCurrent != nil {
 		hints := m.screenCurrent.GetHints()
 		if len(hints) != 0 {
+			val := ""
 			for _, hint := range hints {
-				parts = append(parts, hint.actionName+" ["+strings.Join(hint.buttons, "/")+"]")
+				val += hint.actionName + " [" + strings.Join(hint.buttons, "/") + "] "
 			}
 
-			parts = append(parts, addLine()+"\n")
+			parts = append(parts, val, addLine()+"\n")
 		}
 	}
 
@@ -328,8 +130,7 @@ func (m model) header() string {
 func (m model) footer() string {
 	return strings.Join([]string{
 		addLine(),
-		"Build Version: " + m.buildVersion,
-		"Build Date: " + m.buildDate,
+		"[Build] Version: " + m.buildVersion + ", Date: " + m.buildDate + ".",
 		addLine() + "\n",
 	}, "\n")
 

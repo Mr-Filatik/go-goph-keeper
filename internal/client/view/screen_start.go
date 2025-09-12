@@ -24,6 +24,26 @@ func NewStartScreen(mod *model) *StartScreen {
 	}
 }
 
+func (s *StartScreen) LoadScreen(fnc func()) IScreen {
+	s.Index = 0
+
+	if fnc != nil {
+		fnc()
+	}
+
+	min := 0
+	if s.Index < min {
+		s.Index = min
+	}
+
+	max := len(s.Items) - 1
+	if s.Index > max {
+		s.Index = max
+	}
+
+	return s
+}
+
 func (s *StartScreen) String() string {
 	view := "\n[Menu] Select action:\n"
 
@@ -43,26 +63,28 @@ func (s *StartScreen) GetHints() []Hint {
 	return []Hint{
 		{"Select", []string{KeyEnter}},
 		{"Switch", []string{KeyTab}},
-		{"Next", []string{KeyDown, KeyDownWASD, KeyNext}},
-		{"Previous", []string{KeyUp, KeyUpWASD, KeyPrev}},
-		{"Quit", []string{KeyEscape, KeyEscapeShort, KeyQuit, KeyQuitShort}},
+		{"Next", []string{KeyDown}},
+		{"Previous", []string{KeyUp}},
+		{"Quit", []string{KeyEscape, KeyQuit}},
 	}
 }
 
 func (s *StartScreen) Action(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch key.String() {
-	case KeyEscape, KeyEscapeShort, KeyQuit, KeyQuitShort:
+	case KeyEscape, KeyQuit:
 		return s.mainModel, tea.Quit
 
 	case KeyEnter:
 		if s.Items[s.Index] == "Login" {
-			s.mainModel.screenCurrent = s.mainModel.screenLogin
+			s.mainModel.screenCurrent = s.mainModel.screenLogin.LoadScreen(func() {
+				s.mainModel.screenLogin.ErrMessage = "WOW"
+			})
 
 			return s.mainModel, nil
 		}
 
 		if s.Items[s.Index] == "Register" {
-			s.mainModel.screenCurrent = s.mainModel.screenRegister
+			s.mainModel.screenCurrent = s.mainModel.screenRegister.LoadScreen(nil)
 
 			return s.mainModel, nil
 		}
@@ -82,14 +104,14 @@ func (s *StartScreen) Action(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 		return s.mainModel, nil
 
-	case KeyUp, KeyUpWASD, KeyPrev:
+	case KeyUp:
 		if s.Index > 0 {
 			s.Index--
 		}
 
 		return s.mainModel, nil
 
-	case KeyDown, KeyDownWASD, KeyNext:
+	case KeyDown:
 		if s.Index < len(s.Items)-1 {
 			s.Index++
 		}
