@@ -24,7 +24,9 @@ func NewStartScreen(mod *teaModel) *StartScreen {
 	}
 }
 
-func (s *StartScreen) LoadScreen(fnc func()) IScreen {
+func (s *StartScreen) LoadScreen(fnc func()) {
+	s.mainModel.screenCurrent = s
+
 	s.Index = 0
 
 	if fnc != nil {
@@ -40,8 +42,6 @@ func (s *StartScreen) LoadScreen(fnc func()) IScreen {
 	if s.Index > max {
 		s.Index = max
 	}
-
-	return s
 }
 
 func (s *StartScreen) String() string {
@@ -77,7 +77,7 @@ func (s *StartScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case KeyEnter:
 			if s.Items[s.Index] == "Login" {
-				s.mainModel.screenCurrent = s.mainModel.screenLogin.LoadScreen(func() {
+				s.mainModel.screenLogin.LoadScreen(func() {
 					s.mainModel.screenLogin.ErrMessage = "WOW"
 				})
 
@@ -85,7 +85,7 @@ func (s *StartScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			if s.Items[s.Index] == "Register" {
-				s.mainModel.screenCurrent = s.mainModel.screenRegister.LoadScreen(nil)
+				s.mainModel.screenRegister.LoadScreen(nil)
 
 				return s.mainModel, nil
 			}

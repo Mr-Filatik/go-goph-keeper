@@ -1,6 +1,8 @@
 package view
 
 import (
+	"context"
+	"fmt"
 	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -36,7 +38,9 @@ func NewLoginScreen(mod *teaModel) *LoginScreen {
 	}
 }
 
-func (s *LoginScreen) LoadScreen(fnc func()) IScreen {
+func (s *LoginScreen) LoadScreen(fnc func()) {
+	s.mainModel.screenCurrent = s
+
 	// login input
 	loginInput := textinput.New()
 	loginInput.Placeholder = "your email"
@@ -57,8 +61,6 @@ func (s *LoginScreen) LoadScreen(fnc func()) IScreen {
 	if fnc != nil {
 		fnc()
 	}
-
-	return s
 }
 
 func (s *LoginScreen) String() string {
@@ -84,41 +86,6 @@ func (s *LoginScreen) GetHints() []Hint {
 }
 
 func (s *LoginScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// switch v := msg.(type) {
-	// case authProgress:
-	//     if ls, ok := m.screenCurrent.(*LoadingScreen); ok {
-	//         ls.percent = v.percent
-	//         ls.status = v.status
-	//     }
-	//     return m, nil
-
-	// case authOK:
-	//     m.currentUser = &v.u
-	//     m.screenCurrent = m.screenPassList.LoadScreen(nil)
-	//     return m, nil
-
-	// case authFailed:
-	//     // вернуться на логин с ошибкой
-	//     if ls, ok := m.screenCurrent.(*LoadingScreen); ok && ls.cancel != nil {
-	//         // уже закончилась — cancel не нужен, но пусть будет безопасно
-	//         ls.cancel()
-	//     }
-	//     // переоткроем логин-скрин и передадим сообщение
-	//     if lscr, ok := m.screenStart.(*LoginScreen); ok {
-	//         lscr.ErrMessage = v.err.Error()
-	//         s.mainModel.screenCurrent = lscr.LoadScreen(nil)
-	//     }
-	//     return s.mainModel, nil
-
-	// case authCanceled:
-	//     // вернуться на логин без ошибки (или со своей подписью)
-	//     if lscr, ok := s.mainModel.screenStart.(*LoginScreen); ok {
-	//         lscr.ErrMessage = "Canceled"
-	//         s.mainModel.screenCurrent = lscr.LoadScreen(nil)
-	//     }
-	//     return s.mainModel, nil
-	// }
-
 	key, isKey := msg.(tea.KeyMsg)
 	if isKey {
 		switch key.String() {
@@ -126,7 +93,7 @@ func (s *LoginScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return s.mainModel, tea.Quit
 
 		case KeyEscape:
-			s.mainModel.screenCurrent = s.mainModel.screenStart.LoadScreen(nil)
+			s.mainModel.screenStart.LoadScreen(nil)
 
 			return s.mainModel, nil
 
@@ -140,26 +107,42 @@ func (s *LoginScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return s.mainModel, nil
 			}
 
-			// ctx, _ := context.WithCancel(context.Background())
+			ctx, _ := context.WithCancel(context.Background())
 
-			// s.mainModel.loadingCmd = authCmd(ctx, login, password)
-			s.mainModel.screenCurrent = s.mainModel.screenLoading.LoadScreen(func() {
+			s.mainModel.screenLoading.LoadScreen(func() {
 				s.mainModel.screenLoading.title = "Test"
 				s.mainModel.screenLoading.desc = "test test test"
 
-				s.mainModel.screenLoading.login = login
-				s.mainModel.screenLoading.pass = password
+				s.mainModel.screenLoading.OnDone = func(payload any) {
+					// успех: кладём пользователя и открываем список
+					s.mainModel.currentUser = &user{Login: login}
+					s.mainModel.screenPassList.LoadScreen(nil)
+				}
+
+				s.mainModel.screenLoading.OnError = func(err error) {
+					// ошибка: вернуться на логин и показать сообщение
+					s.ErrMessage = err.Error()
+					s.LoadScreen(func() {
+						s.mainModel.screenLogin.ErrMessage = "ERROR" + login + password + err.Error()
+					})
+				}
+
+				s.mainModel.screenLoading.OnCancel = func() {
+					// отмена: вернуться на логин (можно со своим текстом)
+					s.ErrMessage = "Canceled"
+					s.LoadScreen(nil)
+				}
+
+				s.mainModel.screenLoading.OnProgress = func(percent float64, _ string) tea.Cmd {
+					return tea.Tick(150*time.Millisecond, func(time.Time) tea.Msg {
+						return loginStep(ctx, percent, login, password)
+					})
+				}
 			})
 
-			// s.mainModel.screenCurrent = s.mainModel.screenPassList.LoadScreen(func() {
-			// 	s.mainModel.currentUser = &user{
-			// 		Login: s.LoginInput.Value(),
-			// 	}
-			// })
-
-			// s.ErrMessage = "happy (" + s.LoginInput.Value() + ") (" + s.PasswordInput.Value() + ")"
-
-			return s.mainModel, tea.Tick(150*time.Millisecond, func(time.Time) tea.Msg { return LoadingProgressMsg{} })
+			return s.mainModel, tea.Tick(150*time.Millisecond, func(time.Time) tea.Msg {
+				return loginStep(ctx, 0, login, password)
+			})
 
 		case KeyTab, KeyDown, KeyUp:
 			if s.LoginInput.Focused() {
@@ -184,43 +167,38 @@ func (s *LoginScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return s.mainModel, cmd
 }
 
-// type authOK struct{ u user }
-// type authFailed struct{ err error }
-// type authCanceled struct{}
-// type authProgress struct {
-// 	percent float64
-// 	status  string
-// }
+func loginStep(ctx context.Context, current float64, login, pass string) tea.Msg {
+	select {
+	case <-ctx.Done():
+		return LoadingDoneMsg{Err: context.Canceled}
+	default:
+	}
 
-// func (s *LoginScreen) authAction(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// увеличиваем прогресс и шлём его
+	next := current + 5
+	if next >= 100 {
+		// финал: делайте реальную проверку логина/пароля
+		if login == "demo" && pass == "demo" {
+			return LoadingDoneMsg{Payload: user{Login: login}}
+		}
+		return LoadingDoneMsg{Err: fmt.Errorf("invalid credentials %s %s", login, pass)}
+	}
 
-// }
+	// промежуточный прогресс — отправляем И планируем следующий тик
+	status := "Authorizing…"
+	switch {
+	case next < 30:
+		status = "Authorizing…"
+	case next < 60:
+		status = "Encrypting…"
+	case next < 90:
+		status = "Syncing…"
+	default:
+		status = "Finalizing…"
+	}
 
-// func authCmd(ctx context.Context, login, pass string) tea.Cmd {
-// 	return func() tea.Msg {
-// 		// пример «прогресса» (замените на реальную работу)
-// 		ticker := time.NewTicker(500 * time.Millisecond)
-// 		defer ticker.Stop()
-// 		p := 0.0
-// 		for {
-// 			select {
-// 			case <-ctx.Done():
-// 				return authCanceled{}
-// 			case <-ticker.C:
-// 				p += 5
-// 				if p >= 100 {
-// 					// тут сделайте реальную проверку логина/пароля
-// 					if login == "demo" && pass == "demo" {
-// 						return authOK{u: user{Login: login}}
-// 					}
-// 					return authFailed{err: fmt.Errorf("invalid credentials")}
-// 				}
-// 				// можно периодически возвращать прогресс
-// 				return tea.Batch(
-// 					func() tea.Msg { return authProgress{percent: p, status: "Authorizing…"} },
-// 					authCmd(ctx, login, pass), // продолжить
-// 				)
-// 			}
-// 		}
-// 	}
-// }
+	return LoadingProgressMsg{
+		Percent: next,
+		Status:  status,
+	}
+}

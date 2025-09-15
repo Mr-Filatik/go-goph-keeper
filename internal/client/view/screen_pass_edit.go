@@ -30,7 +30,9 @@ func NewPasswordEditScreen(mod *teaModel) *PasswordEditScreen {
 	}
 }
 
-func (s *PasswordEditScreen) LoadScreen(fnc func()) IScreen {
+func (s *PasswordEditScreen) LoadScreen(fnc func()) {
+	s.mainModel.screenCurrent = s
+
 	s.Index = 0
 	s.Item = nil
 	s.InfoMessage = ""
@@ -48,8 +50,6 @@ func (s *PasswordEditScreen) LoadScreen(fnc func()) IScreen {
 	if s.Index > max {
 		s.Index = max
 	}
-
-	return s
 }
 
 func (s *PasswordEditScreen) String() string {
@@ -160,7 +160,7 @@ func (s *PasswordEditScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (s *PasswordEditScreen) actionBackToList() (tea.Model, tea.Cmd) {
-	s.mainModel.screenCurrent = s.mainModel.screenPassList.LoadScreen(func() {
+	s.mainModel.screenPassList.LoadScreen(func() {
 		for i := 0; i < len(s.mainModel.screenPassList.Items); i++ {
 			if s.Item == s.mainModel.screenPassList.Items[i] {
 				s.mainModel.screenPassList.Index = i

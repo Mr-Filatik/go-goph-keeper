@@ -31,6 +31,10 @@ type teaModel struct {
 	screenPassDetails *PasswordDetailsScreen
 	screenPassEdit    *PasswordEditScreen
 	screenLoading     *LoadingScreen
+
+	onLoadingDone   func(payload any)
+	onLoadingError  func(err error)
+	onLoadingCancel func()
 }
 
 func initialModel() teaModel {
@@ -61,6 +65,10 @@ func initialModel() teaModel {
 	mod.screenCurrent = mod.screenStart
 
 	return *mod
+}
+
+func (m teaModel) SetScreen(screen IScreen) { // перейти на неё
+	m.screenCurrent = screen
 }
 
 func (m teaModel) Init() tea.Cmd { return nil }

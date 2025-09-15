@@ -34,7 +34,9 @@ func NewRegisterScreen(mod *teaModel) *RegisterScreen {
 	}
 }
 
-func (s *RegisterScreen) LoadScreen(fnc func()) IScreen {
+func (s *RegisterScreen) LoadScreen(fnc func()) {
+	s.mainModel.screenCurrent = s
+
 	// login input
 	loginInput := textinput.New()
 	loginInput.Placeholder = "your email"
@@ -55,8 +57,6 @@ func (s *RegisterScreen) LoadScreen(fnc func()) IScreen {
 	if fnc != nil {
 		fnc()
 	}
-
-	return s
 }
 
 func (s *RegisterScreen) String() string {
@@ -89,7 +89,7 @@ func (s *RegisterScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return s.mainModel, tea.Quit
 
 		case KeyEscape:
-			s.mainModel.screenCurrent = s.mainModel.screenStart.LoadScreen(nil)
+			s.mainModel.screenStart.LoadScreen(nil)
 
 			return s.mainModel, nil
 
@@ -100,7 +100,7 @@ func (s *RegisterScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return s.mainModel, nil
 			}
 
-			s.mainModel.screenCurrent = s.mainModel.screenPassList.LoadScreen(func() {
+			s.mainModel.screenPassList.LoadScreen(func() {
 				s.mainModel.currentUser = &user{
 					Login: s.LoginInput.Value(),
 				}

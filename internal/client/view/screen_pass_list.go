@@ -24,7 +24,9 @@ func NewPasswordListScreen(mod *teaModel) *PasswordListScreen {
 	}
 }
 
-func (s *PasswordListScreen) LoadScreen(fnc func()) IScreen {
+func (s *PasswordListScreen) LoadScreen(fnc func()) {
+	s.mainModel.screenCurrent = s
+
 	s.Index = 0
 	// s.Items = []*item{
 	// 	{"GitHub", "Personal account", "vlad", "ghp_example_password", "2FA: TOTP in Authy"},
@@ -45,8 +47,6 @@ func (s *PasswordListScreen) LoadScreen(fnc func()) IScreen {
 	if s.Index > max {
 		s.Index = max
 	}
-
-	return s
 }
 
 func (s *PasswordListScreen) String() string {
@@ -95,7 +95,7 @@ func (s *PasswordListScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return s.mainModel, nil
 
 		case KeyEnter:
-			s.mainModel.screenCurrent = s.mainModel.screenPassDetails.LoadScreen(func() {
+			s.mainModel.screenPassDetails.LoadScreen(func() {
 				s.mainModel.screenPassDetails.Item = s.Items[s.Index]
 			})
 
