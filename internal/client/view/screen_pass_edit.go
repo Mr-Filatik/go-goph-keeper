@@ -7,7 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-type PasswordDetailsScreen struct {
+type PasswordEditScreen struct {
 	mainModel   *teaModel
 	Index       int
 	Items       []string
@@ -15,8 +15,8 @@ type PasswordDetailsScreen struct {
 	InfoMessage string
 }
 
-func NewPasswordDetailsScreen(mod *teaModel) *PasswordDetailsScreen {
-	return &PasswordDetailsScreen{
+func NewPasswordEditScreen(mod *teaModel) *PasswordEditScreen {
+	return &PasswordEditScreen{
 		mainModel: mod,
 		Index:     0,
 		Items: []string{
@@ -30,7 +30,7 @@ func NewPasswordDetailsScreen(mod *teaModel) *PasswordDetailsScreen {
 	}
 }
 
-func (s *PasswordDetailsScreen) LoadScreen(fnc func()) IScreen {
+func (s *PasswordEditScreen) LoadScreen(fnc func()) IScreen {
 	s.Index = 0
 	s.Item = nil
 	s.InfoMessage = ""
@@ -52,8 +52,8 @@ func (s *PasswordDetailsScreen) LoadScreen(fnc func()) IScreen {
 	return s
 }
 
-func (s *PasswordDetailsScreen) String() string {
-	view := "\n[Password Details] Data:\n"
+func (s *PasswordEditScreen) String() string {
+	view := "\n[Password Edit] Edit:\n"
 
 	if s.Item == nil {
 		view += "\nNo data...\n"
@@ -82,7 +82,7 @@ func (s *PasswordDetailsScreen) String() string {
 	return view
 }
 
-func (s *PasswordDetailsScreen) GetHints() []Hint {
+func (s *PasswordEditScreen) GetHints() []Hint {
 	return []Hint{
 		{"Select", []string{KeyEnter}},
 		{"Switch", []string{KeyTab}},
@@ -92,7 +92,7 @@ func (s *PasswordDetailsScreen) GetHints() []Hint {
 	}
 }
 
-func (s *PasswordDetailsScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (s *PasswordEditScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if key, isKey := msg.(tea.KeyMsg); isKey {
 		switch key.String() {
 		case KeyQuit:
@@ -159,7 +159,7 @@ func (s *PasswordDetailsScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return s.mainModel, nil
 }
 
-func (s *PasswordDetailsScreen) actionBackToList() (tea.Model, tea.Cmd) {
+func (s *PasswordEditScreen) actionBackToList() (tea.Model, tea.Cmd) {
 	s.mainModel.screenCurrent = s.mainModel.screenPassList.LoadScreen(func() {
 		for i := 0; i < len(s.mainModel.screenPassList.Items); i++ {
 			if s.Item == s.mainModel.screenPassList.Items[i] {

@@ -7,12 +7,12 @@ import (
 )
 
 type PasswordListScreen struct {
-	mainModel *model
+	mainModel *teaModel
 	Index     int
 	Items     []*item
 }
 
-func NewPasswordListScreen(mod *model) *PasswordListScreen {
+func NewPasswordListScreen(mod *teaModel) *PasswordListScreen {
 	return &PasswordListScreen{
 		mainModel: mod,
 		Index:     0,
@@ -74,35 +74,37 @@ func (s *PasswordListScreen) GetHints() []Hint {
 	}
 }
 
-func (s *PasswordListScreen) Action(key tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch key.String() {
-	case KeyQuit:
-		return s.mainModel, tea.Quit
+func (s *PasswordListScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if key, isKey := msg.(tea.KeyMsg); isKey {
+		switch key.String() {
+		case KeyQuit:
+			return s.mainModel, tea.Quit
 
-	case KeyUp:
-		if s.Index > 0 {
-			s.Index--
+		case KeyUp:
+			if s.Index > 0 {
+				s.Index--
+			}
+
+			return s.mainModel, nil
+
+		case KeyDown:
+			if s.Index < len(s.Items)-1 {
+				s.Index++
+			}
+
+			return s.mainModel, nil
+
+		case KeyEnter:
+			s.mainModel.screenCurrent = s.mainModel.screenPassDetails.LoadScreen(func() {
+				s.mainModel.screenPassDetails.Item = s.Items[s.Index]
+			})
+
+			return s.mainModel, nil
+
+			// s.mainModel.selected = &s.mainModel.items[s.mainModel.listIndex]
+			// s.mainModel.currentScreen = screenPasswordDetails
+			// s.mainModel.statusMsg = "Opened details"
 		}
-
-		return s.mainModel, nil
-
-	case KeyDown:
-		if s.Index < len(s.Items)-1 {
-			s.Index++
-		}
-
-		return s.mainModel, nil
-
-	case KeyEnter:
-		s.mainModel.screenCurrent = s.mainModel.screenPassDetails.LoadScreen(func() {
-			s.mainModel.screenPassDetails.Item = s.Items[s.Index]
-		})
-
-		return s.mainModel, nil
-
-		// s.mainModel.selected = &s.mainModel.items[s.mainModel.listIndex]
-		// s.mainModel.currentScreen = screenPasswordDetails
-		// s.mainModel.statusMsg = "Opened details"
 	}
 
 	return s.mainModel, nil

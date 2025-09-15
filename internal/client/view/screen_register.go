@@ -6,13 +6,13 @@ import (
 )
 
 type RegisterScreen struct {
-	mainModel     *model
+	mainModel     *teaModel
 	LoginInput    textinput.Model
 	PasswordInput textinput.Model
 	ErrMessage    string
 }
 
-func NewRegisterScreen(mod *model) *RegisterScreen {
+func NewRegisterScreen(mod *teaModel) *RegisterScreen {
 	// login input
 	loginInput := textinput.New()
 	loginInput.Placeholder = "your email"
@@ -81,42 +81,45 @@ func (s *RegisterScreen) GetHints() []Hint {
 	}
 }
 
-func (s *RegisterScreen) Action(key tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch key.String() {
-	case KeyQuit:
-		return s.mainModel, tea.Quit
+func (s *RegisterScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
+	key, isKey := msg.(tea.KeyMsg)
+	if isKey {
+		switch key.String() {
+		case KeyQuit:
+			return s.mainModel, tea.Quit
 
-	case KeyEscape:
-		s.mainModel.screenCurrent = s.mainModel.screenStart.LoadScreen(nil)
+		case KeyEscape:
+			s.mainModel.screenCurrent = s.mainModel.screenStart.LoadScreen(nil)
 
-		return s.mainModel, nil
+			return s.mainModel, nil
 
-	case KeyEnter:
-		if s.LoginInput.Value() == "" || s.PasswordInput.Value() == "" {
-			s.ErrMessage = "login and password are required"
+		case KeyEnter:
+			if s.LoginInput.Value() == "" || s.PasswordInput.Value() == "" {
+				s.ErrMessage = "login and password are required"
+
+				return s.mainModel, nil
+			}
+
+			s.mainModel.screenCurrent = s.mainModel.screenPassList.LoadScreen(func() {
+				s.mainModel.currentUser = &user{
+					Login: s.LoginInput.Value(),
+				}
+			})
+			// s.ErrMessage = "happy (" + s.LoginInput.Value() + ") (" + s.PasswordInput.Value() + ")"
+
+			return s.mainModel, nil
+
+		case KeyTab, KeyDown, KeyUp:
+			if s.LoginInput.Focused() {
+				s.LoginInput.Blur()
+				s.PasswordInput.Focus()
+			} else {
+				s.PasswordInput.Blur()
+				s.LoginInput.Focus()
+			}
 
 			return s.mainModel, nil
 		}
-
-		s.mainModel.screenCurrent = s.mainModel.screenPassList.LoadScreen(func() {
-			s.mainModel.currentUser = &user{
-				Login: s.LoginInput.Value(),
-			}
-		})
-		// s.ErrMessage = "happy (" + s.LoginInput.Value() + ") (" + s.PasswordInput.Value() + ")"
-
-		return s.mainModel, nil
-
-	case KeyTab, KeyDown, KeyUp:
-		if s.LoginInput.Focused() {
-			s.LoginInput.Blur()
-			s.PasswordInput.Focus()
-		} else {
-			s.PasswordInput.Blur()
-			s.LoginInput.Focus()
-		}
-
-		return s.mainModel, nil
 	}
 
 	var cmd tea.Cmd

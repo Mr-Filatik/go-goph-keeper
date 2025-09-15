@@ -14,7 +14,7 @@ type IScreen interface {
 	GetHints() []Hint
 
 	// Action описывает все действия для данного окна.
-	Action(key tea.KeyMsg) (tea.Model, tea.Cmd)
+	Action(msg tea.Msg) (tea.Model, tea.Cmd)
 
 	// LoadAction описывает действия, необходимые при загрузке окна.
 	// Сама функция выполняет действия по обнулению необходимых данных.

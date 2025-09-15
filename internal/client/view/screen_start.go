@@ -7,12 +7,12 @@ import (
 )
 
 type StartScreen struct {
-	mainModel *model
+	mainModel *teaModel
 	Index     int
 	Items     []string
 }
 
-func NewStartScreen(mod *model) *StartScreen {
+func NewStartScreen(mod *teaModel) *StartScreen {
 	return &StartScreen{
 		mainModel: mod,
 		Index:     0,
@@ -69,54 +69,56 @@ func (s *StartScreen) GetHints() []Hint {
 	}
 }
 
-func (s *StartScreen) Action(key tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch key.String() {
-	case KeyEscape, KeyQuit:
-		return s.mainModel, tea.Quit
-
-	case KeyEnter:
-		if s.Items[s.Index] == "Login" {
-			s.mainModel.screenCurrent = s.mainModel.screenLogin.LoadScreen(func() {
-				s.mainModel.screenLogin.ErrMessage = "WOW"
-			})
-
-			return s.mainModel, nil
-		}
-
-		if s.Items[s.Index] == "Register" {
-			s.mainModel.screenCurrent = s.mainModel.screenRegister.LoadScreen(nil)
-
-			return s.mainModel, nil
-		}
-
-		if s.Items[s.Index] == "Quit" {
+func (s *StartScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if key, isKey := msg.(tea.KeyMsg); isKey {
+		switch key.String() {
+		case KeyEscape, KeyQuit:
 			return s.mainModel, tea.Quit
+
+		case KeyEnter:
+			if s.Items[s.Index] == "Login" {
+				s.mainModel.screenCurrent = s.mainModel.screenLogin.LoadScreen(func() {
+					s.mainModel.screenLogin.ErrMessage = "WOW"
+				})
+
+				return s.mainModel, nil
+			}
+
+			if s.Items[s.Index] == "Register" {
+				s.mainModel.screenCurrent = s.mainModel.screenRegister.LoadScreen(nil)
+
+				return s.mainModel, nil
+			}
+
+			if s.Items[s.Index] == "Quit" {
+				return s.mainModel, tea.Quit
+			}
+
+			return s.mainModel, nil
+
+		case KeyTab:
+			if s.Index < len(s.Items)-1 {
+				s.Index++
+			} else {
+				s.Index = 0
+			}
+
+			return s.mainModel, nil
+
+		case KeyUp:
+			if s.Index > 0 {
+				s.Index--
+			}
+
+			return s.mainModel, nil
+
+		case KeyDown:
+			if s.Index < len(s.Items)-1 {
+				s.Index++
+			}
+
+			return s.mainModel, nil
 		}
-
-		return s.mainModel, nil
-
-	case KeyTab:
-		if s.Index < len(s.Items)-1 {
-			s.Index++
-		} else {
-			s.Index = 0
-		}
-
-		return s.mainModel, nil
-
-	case KeyUp:
-		if s.Index > 0 {
-			s.Index--
-		}
-
-		return s.mainModel, nil
-
-	case KeyDown:
-		if s.Index < len(s.Items)-1 {
-			s.Index++
-		}
-
-		return s.mainModel, nil
 	}
 
 	return s.mainModel, nil
