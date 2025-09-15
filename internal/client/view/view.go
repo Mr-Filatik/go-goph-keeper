@@ -1,3 +1,4 @@
+// Package view содержит логику для работы с пользовательским интерфейсом.
 package view
 
 import (
@@ -8,22 +9,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-type teaModel struct {
+// ViewModel описывает модель для отображения данных в консоли.
+type ViewModel struct {
 	currentUser *user
 
-	// global/app info always shown in header
-	appName      string
-	buildVersion string
-	buildDate    string
-	buildCommit  string
-
-	// loading screen data
-	loadingInfo    string
-	loadingPercent float64
-
-	loadingCmd tea.Cmd // команда для действий, требующих время
-
-	screenCurrent     IScreen
 	screenStart       *StartScreen
 	screenLogin       *LoginScreen
 	screenRegister    *RegisterScreen
@@ -32,17 +21,22 @@ type teaModel struct {
 	screenPassEdit    *PasswordEditScreen
 	screenLoading     *LoadingScreen
 
-	onLoadingDone   func(payload any)
-	onLoadingError  func(err error)
-	onLoadingCancel func()
+	screenCurrent IScreen
+
+	// Глобальные данные, которые используются на всех окнах приложения.
+
+	appName      string
+	buildVersion string
+	buildDate    string
+	buildCommit  string
 }
 
-func initialModel() teaModel {
-	mod := &teaModel{
-		appName:           "AppName",
-		buildVersion:      "Version",
-		buildDate:         "Build",
-		buildCommit:       "Commit",
+func newViewModel() *ViewModel {
+	mod := &ViewModel{
+		appName:           "N/A",
+		buildVersion:      "N/A",
+		buildDate:         "N/A",
+		buildCommit:       "N/A",
 		currentUser:       nil,
 		screenCurrent:     nil,
 		screenStart:       nil,
@@ -64,14 +58,17 @@ func initialModel() teaModel {
 
 	mod.screenCurrent = mod.screenStart
 
-	return *mod
+	return mod
 }
 
-func (m teaModel) SetScreen(screen IScreen) { // перейти на неё
-	m.screenCurrent = screen
+// SetCurrentScreen устанавливает новое текущее окно.
+func (m *ViewModel) SetCurrentScreen(screen IScreen) {
+	if screen != nil {
+		m.screenCurrent = screen
+	}
 }
 
-func (m teaModel) Init() tea.Cmd { return nil }
+func (m *ViewModel) Init() tea.Cmd { return nil }
 
 // Кнопки для управления UI.
 const (
@@ -89,14 +86,7 @@ const (
 	KeyQuit   = "ctrl+q"
 )
 
-func (m teaModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// if m.loadingCmd != nil {
-	// 	cmd := m.loadingCmd
-	// 	m.loadingCmd = nil
-
-	// 	return m, cmd
-	// }
-
+func (m *ViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.screenCurrent != nil {
 		return m.screenCurrent.Action(msg)
 	}
@@ -104,7 +94,7 @@ func (m teaModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m teaModel) View() string {
+func (m *ViewModel) View() string {
 	view := m.header()
 
 	if m.screenCurrent != nil {
@@ -121,7 +111,7 @@ const (
 	lineSymbol = "─"
 )
 
-func (m teaModel) header() string {
+func (m *ViewModel) header() string {
 	parts := []string{
 		addLine(),
 	}
@@ -149,7 +139,7 @@ func (m teaModel) header() string {
 	return strings.Join(parts, "\n")
 }
 
-func (m teaModel) footer() string {
+func (m *ViewModel) footer() string {
 	return strings.Join([]string{
 		addLine(),
 		"[Build] Version: " + m.buildVersion + ", Date: " + m.buildDate + ".",
@@ -171,7 +161,7 @@ func addLine() string {
 }
 
 func Start() {
-	m := initialModel()
+	m := newViewModel()
 	if _, err := tea.NewProgram(m, tea.WithAltScreen()).Run(); err != nil {
 		fmt.Println("error:", err)
 		os.Exit(1)

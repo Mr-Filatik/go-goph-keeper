@@ -1,3 +1,4 @@
+// Package view содержит логику для работы с пользовательским интерфейсом.
 package view
 
 import (
@@ -7,15 +8,17 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// PasswordDetailsScreen описывает экран детальной информации о пароле и необходимые ему данные.
 type PasswordDetailsScreen struct {
-	mainModel   *teaModel
+	mainModel   *ViewModel
 	Index       int
 	Items       []string
 	Item        *item
 	InfoMessage string
 }
 
-func NewPasswordDetailsScreen(mod *teaModel) *PasswordDetailsScreen {
+// NewPasswordDetailsScreen создаёт новый экзепляр *PasswordDetailsScreen.
+func NewPasswordDetailsScreen(mod *ViewModel) *PasswordDetailsScreen {
 	return &PasswordDetailsScreen{
 		mainModel: mod,
 		Index:     0,
@@ -52,6 +55,7 @@ func (s *PasswordDetailsScreen) LoadScreen(fnc func()) {
 	}
 }
 
+// String выводит окно и его содержимое в виде строки.
 func (s *PasswordDetailsScreen) String() string {
 	view := "\n[Password Details] Data:\n"
 
@@ -82,6 +86,7 @@ func (s *PasswordDetailsScreen) String() string {
 	return view
 }
 
+// GetHints выводит подсказки по управлению для текущего окна.
 func (s *PasswordDetailsScreen) GetHints() []Hint {
 	return []Hint{
 		{"Select", []string{KeyEnter}},
@@ -92,6 +97,7 @@ func (s *PasswordDetailsScreen) GetHints() []Hint {
 	}
 }
 
+// Action описывает логику работы с командами для текущего окна.
 func (s *PasswordDetailsScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if key, isKey := msg.(tea.KeyMsg); isKey {
 		switch key.String() {

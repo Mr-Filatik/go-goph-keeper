@@ -1,3 +1,4 @@
+// Package view содержит логику для работы с пользовательским интерфейсом.
 package view
 
 import (
@@ -5,14 +6,16 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// RegisterScreen описывает экран рагистрации и необходимые ему данные.
 type RegisterScreen struct {
-	mainModel     *teaModel
+	mainModel     *ViewModel
 	LoginInput    textinput.Model
 	PasswordInput textinput.Model
 	ErrMessage    string
 }
 
-func NewRegisterScreen(mod *teaModel) *RegisterScreen {
+// NewRegisterScreen создаёт новый экзепляр *RegisterScreen.
+func NewRegisterScreen(mod *ViewModel) *RegisterScreen {
 	// login input
 	loginInput := textinput.New()
 	loginInput.Placeholder = "your email"
@@ -59,6 +62,7 @@ func (s *RegisterScreen) LoadScreen(fnc func()) {
 	}
 }
 
+// String выводит окно и его содержимое в виде строки.
 func (s *RegisterScreen) String() string {
 	view := "\n[Register] Enter email and password:\n"
 
@@ -72,6 +76,7 @@ func (s *RegisterScreen) String() string {
 	return view
 }
 
+// GetHints выводит подсказки по управлению для текущего окна.
 func (s *RegisterScreen) GetHints() []Hint {
 	return []Hint{
 		{"Login", []string{KeyEnter}},
@@ -81,6 +86,7 @@ func (s *RegisterScreen) GetHints() []Hint {
 	}
 }
 
+// Action описывает логику работы с командами для текущего окна.
 func (s *RegisterScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
 	key, isKey := msg.(tea.KeyMsg)
 	if isKey {

@@ -1,3 +1,4 @@
+// Package view содержит логику для работы с пользовательским интерфейсом.
 package view
 
 import (
@@ -6,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// IScreen определяет основные функции для всех экранов приложения.
 type IScreen interface {
 	// fmt.Stringer выводит экран в виде строки для отрисовки.
 	fmt.Stringer

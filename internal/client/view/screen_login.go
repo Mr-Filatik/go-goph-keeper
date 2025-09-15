@@ -1,3 +1,4 @@
+// Package view содержит логику для работы с пользовательским интерфейсом.
 package view
 
 import (
@@ -9,14 +10,16 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// LoginScreen описывает экран входа и необходимые ему данные.
 type LoginScreen struct {
-	mainModel     *teaModel
+	mainModel     *ViewModel
 	LoginInput    textinput.Model
 	PasswordInput textinput.Model
 	ErrMessage    string
 }
 
-func NewLoginScreen(mod *teaModel) *LoginScreen {
+// NewLoginScreen создаёт новый экзепляр *LoginScreen.
+func NewLoginScreen(mod *ViewModel) *LoginScreen {
 	// login input
 	loginInput := textinput.New()
 	loginInput.Placeholder = "your email"
@@ -63,6 +66,7 @@ func (s *LoginScreen) LoadScreen(fnc func()) {
 	}
 }
 
+// String выводит окно и его содержимое в виде строки.
 func (s *LoginScreen) String() string {
 	view := "\n[Login] Enter email and password:\n"
 
@@ -76,6 +80,7 @@ func (s *LoginScreen) String() string {
 	return view
 }
 
+// GetHints выводит подсказки по управлению для текущего окна.
 func (s *LoginScreen) GetHints() []Hint {
 	return []Hint{
 		{"Login", []string{KeyEnter}},
@@ -85,6 +90,7 @@ func (s *LoginScreen) GetHints() []Hint {
 	}
 }
 
+// Action описывает логику работы с командами для текущего окна.
 func (s *LoginScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
 	key, isKey := msg.(tea.KeyMsg)
 	if isKey {
@@ -109,38 +115,40 @@ func (s *LoginScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			ctx, _ := context.WithCancel(context.Background())
 
-			s.mainModel.screenLoading.LoadScreen(func() {
-				s.mainModel.screenLoading.title = "Test"
-				s.mainModel.screenLoading.desc = "test test test"
+			// Авторизация пользователя
+			screen := s.mainModel.screenLoading
 
-				s.mainModel.screenLoading.OnDone = func(payload any) {
-					// успех: кладём пользователя и открываем список
-					s.mainModel.currentUser = &user{Login: login}
-					s.mainModel.screenPassList.LoadScreen(nil)
-				}
+			screen.title = "Login user"
+			screen.desc = "Login user by email and password"
 
-				s.mainModel.screenLoading.OnError = func(err error) {
-					// ошибка: вернуться на логин и показать сообщение
-					s.ErrMessage = err.Error()
-					s.LoadScreen(func() {
-						s.mainModel.screenLogin.ErrMessage = "ERROR" + login + password + err.Error()
-					})
-				}
+			screen.OnProgress = func(percent float64, _ string) tea.Cmd {
+				return tea.Tick(RefreshTime, func(time.Time) tea.Msg {
+					return loginStep(ctx, percent, login, password)
+				})
+			}
 
-				s.mainModel.screenLoading.OnCancel = func() {
-					// отмена: вернуться на логин (можно со своим текстом)
-					s.ErrMessage = "Canceled"
-					s.LoadScreen(nil)
-				}
+			screen.OnDone = func(_ any) {
+				s.mainModel.currentUser = &user{Login: login}
+				s.mainModel.screenPassList.LoadScreen(nil)
+			}
 
-				s.mainModel.screenLoading.OnProgress = func(percent float64, _ string) tea.Cmd {
-					return tea.Tick(150*time.Millisecond, func(time.Time) tea.Msg {
-						return loginStep(ctx, percent, login, password)
-					})
-				}
-			})
+			screen.OnCancel = func() {
+				s.LoadScreen(func() {
+					s.mainModel.screenLogin.ErrMessage = "Login canceled"
+					s.mainModel.screenLogin.LoginInput.SetValue(login)
+				})
+			}
 
-			return s.mainModel, tea.Tick(150*time.Millisecond, func(time.Time) tea.Msg {
+			screen.OnError = func(err error) {
+				s.ErrMessage = err.Error()
+				s.LoadScreen(func() {
+					s.mainModel.screenLogin.ErrMessage = "ERROR" + login + password + err.Error()
+				})
+			}
+
+			s.mainModel.SetCurrentScreen(screen)
+
+			return s.mainModel, tea.Tick(RefreshTime, func(time.Time) tea.Msg {
 				return loginStep(ctx, 0, login, password)
 			})
 

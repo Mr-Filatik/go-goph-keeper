@@ -1,27 +1,39 @@
+// Package view содержит логику для работы с пользовательским интерфейсом.
 package view
 
 import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// RefreshTime определяет время для повторной перерисовки интерфейса.
+const RefreshTime = 200 * time.Millisecond
+
 type (
+	// LoadingProgressMsg описывает команду для обновления прогресса окна загрузки.
 	LoadingProgressMsg struct {
 		Percent float64
 		Status  string
 	}
+
+	// LoadingDoneMsg описывает команду для закрытия окна загрузки.
+	//
+	// Где:
+	//   - Payload: что угодно: user, результат операции и т.п.;
+	//   - Err: ошибка (при отмене используется отдельный метод, а не context.Canceled).
 	LoadingDoneMsg struct {
-		Payload any // что угодно: user, результат операции и т.п.
+		Payload any
 		Err     error
 	}
-	// canceledMsg struct{}
 )
 
+// LoadingScreen описывает экран загрузки и необходимые ему данные.
 type LoadingScreen struct {
-	mainModel *teaModel
+	mainModel *ViewModel
 
 	// отображение
 	title   string
@@ -41,7 +53,8 @@ type LoadingScreen struct {
 	OnCancel   func()            // отмена (Esc/с)
 }
 
-func NewLoadingScreen(m *teaModel) *LoadingScreen {
+// NewLoadingScreen создаёт новый экзепляр *LoadingScreen.
+func NewLoadingScreen(m *ViewModel) *LoadingScreen {
 	return &LoadingScreen{
 		mainModel: m,
 	}
@@ -60,33 +73,32 @@ func (s *LoadingScreen) LoadScreen(fnc func()) {
 	if fnc != nil {
 		fnc()
 	}
-
-	// если передан стартовый команд — запустим его из main.Update (см. ниже)
-	// if startCmd != nil {
-	// 	s.mainModel.loadingCmd = startCmd
-	// }
 }
 
+// String выводит окно и его содержимое в виде строки.
 func (s *LoadingScreen) String() string {
-	b := &strings.Builder{}
-	fmt.Fprintf(b, "\n[%s]\n%s\n", s.title, s.desc)
+	builder := &strings.Builder{}
+	fmt.Fprintf(builder, "\n[%s]\n%s\n", s.title, s.desc)
+
 	if s.percent > 0 {
-		fmt.Fprintf(b, "\n[PERCENT]: %.1f%%\n", s.percent)
+		fmt.Fprintf(builder, "\n[PERCENT]: %.1f%%\n", s.percent)
 	}
+
 	if s.status != "" {
-		fmt.Fprintf(b, "\n[STATUS]: %s\n", s.status)
+		fmt.Fprintf(builder, "\n[STATUS]: %s\n", s.status)
 	}
-	fmt.Fprint(b, "\n[Esc]/[c] Cancel   [q] Quit\n")
-	return b.String()
+
+	return builder.String()
 }
 
+// GetHints выводит подсказки по управлению для текущего окна.
 func (s *LoadingScreen) GetHints() []Hint {
 	return []Hint{
 		{"Cancel", []string{KeyEscape}},
-		{"Quit", []string{KeyQuit}},
 	}
 }
 
+// Action описывает логику работы с командами для текущего окна.
 func (s *LoadingScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msgType := msg.(type) {
 	case LoadingProgressMsg:
@@ -112,21 +124,14 @@ func (s *LoadingScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch msgType.String() {
-		case KeyQuit:
+		case KeyEscape:
 			// отменим и выйдем
-			if s.cancel != nil {
-				s.cancel()
+			if s.OnCancel != nil {
+				s.OnCancel()
 			}
-
-			return s.mainModel, tea.Quit
-
-		case KeyEscape, "c":
-			if s.cancel != nil {
-				s.cancel()
-			}
-
-			return s.mainModel, nil
 		}
+
+		return s.mainModel, nil
 	}
 
 	return s.mainModel, nil
