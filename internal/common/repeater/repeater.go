@@ -4,6 +4,7 @@ package repeater
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -145,58 +146,43 @@ func (r *Repeater[Tin, Tout]) Run(parent context.Context, data Tin) (<-chan Done
 			return
 		}
 
-		// Общий бюджет
-		ctx := parent
-
-		if r.DurationLimitAll > 0 {
-			newCtx, cancel := context.WithTimeout(parent, r.DurationLimitAll)
-			ctx = newCtx
+		ctx, cancel := r.withBudget(parent, r.DurationLimitAll)
+		if cancel != nil {
 			defer cancel()
 		}
 
-		// --- Первая попытка ---
-		result, err := r.runAttempt(ctx, data)
-		if r.condition(err) {
-			doneCh <- DoneEvent[Tout]{Result: result, Err: err}
-
+		// Первая попытка
+		done, prevErr := r.attemptAndMaybeFinish(ctx, data, doneCh)
+		if done {
 			return
 		}
 
-		// --- Повторы ---
+		// Повторы
 		for attempt, baseWait := range r.delays {
-			// Оставшееся время бюджета
+			// Проверка оставшегося бюджета
 			rem := remainingUntil(ctx)
+
 			if rem <= 0 {
 				doneCh <- DoneEvent[Tout]{Result: zero, Err: context.DeadlineExceeded}
 
 				return
 			}
 
-			// Ждать будем не дольше оставшегося бюджета
 			wait := minDur(baseWait, rem)
 
-			// Сообщаем о повторе
-			select {
-			case retryCh <- RetryEvent{Attempt: attempt + 1, Err: err, Wait: wait}:
-			default:
-			}
+			// Сообщаем о предстоящем повторе (с ошибкой предыдущей попытки)
+			notifyRetry(retryCh, attempt+1, prevErr, wait)
 
-			// Ожидание или завершение бюджета/отмена
-			timer := time.NewTimer(wait)
-			select {
-			case <-ctx.Done():
-				timer.Stop()
-				doneCh <- DoneEvent[Tout]{Result: zero, Err: ctx.Err()}
+			// Ждём или отменяемся
+			if err := waitOrCancel(ctx, wait); err != nil {
+				doneCh <- DoneEvent[Tout]{Result: zero, Err: err}
 
 				return
-			case <-timer.C:
 			}
 
 			// Следующая попытка
-			result, err = r.runAttempt(ctx, data)
-			if r.condition(err) {
-				doneCh <- DoneEvent[Tout]{Result: result, Err: err}
-
+			done, prevErr = r.attemptAndMaybeFinish(ctx, data, doneCh)
+			if done {
 				return
 			}
 		}
@@ -205,6 +191,56 @@ func (r *Repeater[Tin, Tout]) Run(parent context.Context, data Tin) (<-chan Done
 	}()
 
 	return doneCh, retryCh
+}
+
+// withBudget добавляет общий дедлайн (если задан) и возвращает ctx/cancel.
+func (r *Repeater[Tin, Tout]) withBudget(
+	parent context.Context,
+	d time.Duration,
+) (context.Context, context.CancelFunc) {
+	if d > 0 {
+		return context.WithTimeout(parent, d)
+	}
+
+	return parent, nil
+}
+
+// attemptAndMaybeFinish выполняет одну попытку;
+// если условие выполнено — шлёт результат в doneCh и возвращает done=true.
+// В противном случае возвращает done=false и ошибку попытки (для передачи в retry-ивент).
+func (r *Repeater[Tin, Tout]) attemptAndMaybeFinish(
+	ctx context.Context,
+	data Tin,
+	doneCh chan<- DoneEvent[Tout],
+) (bool, error) {
+	result, err := r.runAttempt(ctx, data)
+	if r.condition(err) {
+		doneCh <- DoneEvent[Tout]{Result: result, Err: err}
+
+		return true, nil
+	}
+
+	return false, err
+}
+
+// notifyRetry шлёт событие о повторе, не блокируясь.
+func notifyRetry(ch chan<- RetryEvent, attempt int, err error, wait time.Duration) {
+	select {
+	case ch <- RetryEvent{Attempt: attempt, Err: err, Wait: wait}:
+	default:
+	}
+}
+
+// waitOrCancel ждёт интервал или возвращает ошибку отмены/дедлайна.
+func waitOrCancel(ctx context.Context, d time.Duration) error {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("cancel: %w", ctx.Err())
+	case <-timer.C:
+		return nil
+	}
 }
 
 // runAttempt запускает одну попытку с учётом DurationLimit и общего бюджета.
