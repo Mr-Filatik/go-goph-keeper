@@ -6,19 +6,20 @@ import (
 
 	"github.com/atotto/clipboard"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/mr-filatik/go-goph-keeper/internal/client/service"
 )
 
 // PasswordDetailsScreen описывает экран детальной информации о пароле и необходимые ему данные.
 type PasswordDetailsScreen struct {
-	mainModel   *ViewModel
+	mainModel   *MainModel
 	Index       int
 	Items       []string
-	Item        *item
+	Item        *service.Password
 	InfoMessage string
 }
 
 // NewPasswordDetailsScreen создаёт новый экзепляр *PasswordDetailsScreen.
-func NewPasswordDetailsScreen(mod *ViewModel) *PasswordDetailsScreen {
+func NewPasswordDetailsScreen(mod *MainModel) *PasswordDetailsScreen {
 	return &PasswordDetailsScreen{
 		mainModel: mod,
 		Index:     0,
@@ -33,17 +34,8 @@ func NewPasswordDetailsScreen(mod *ViewModel) *PasswordDetailsScreen {
 	}
 }
 
-func (s *PasswordDetailsScreen) LoadScreen(fnc func()) {
-	s.mainModel.screenCurrent = s
-
-	s.Index = 0
-	s.Item = nil
-	s.InfoMessage = ""
-
-	if fnc != nil {
-		fnc()
-	}
-
+// ValidateScreenData проверяет и корректирует данные для текущего экрана.
+func (s *PasswordDetailsScreen) ValidateScreenData() {
 	min := 0
 	if s.Index < min {
 		s.Index = min
@@ -64,7 +56,7 @@ func (s *PasswordDetailsScreen) String() string {
 	} else {
 		item := s.Item
 		view += fmt.Sprintf("Name: %s\nDecsription: %s\n", item.Title, item.Description)
-		view += fmt.Sprintf("Login: %s\n", item.Username)
+		view += fmt.Sprintf("Login: %s\n", item.Login)
 		view += "Password: [hidden] (press 'ctrl+c' to copy)\n"
 	}
 
@@ -93,38 +85,31 @@ func (s *PasswordDetailsScreen) GetHints() []Hint {
 		{"Switch", []string{KeyTab}},
 		{"Next", []string{KeyDown}},
 		{"Previous", []string{KeyUp}},
-		{"Quit", []string{KeyEscape, KeyQuit}},
+		{"Back", []string{KeyEscape}},
 	}
 }
 
 // Action описывает логику работы с командами для текущего окна.
-func (s *PasswordDetailsScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (s *PasswordDetailsScreen) Action(msg tea.Msg) (*MainModel, tea.Cmd) {
 	if key, isKey := msg.(tea.KeyMsg); isKey {
 		switch key.String() {
-		case KeyQuit:
-			return s.mainModel, tea.Quit
-
 		case KeyEscape:
 			return s.actionBackToList()
 
 		case KeyUp:
-			if s.Index > 0 {
-				s.Index--
-			}
+			s.Index = indexPrev(s.Index)
 
 			return s.mainModel, nil
 
 		case KeyDown:
-			if s.Index < len(s.Items)-1 {
-				s.Index++
-			}
+			s.Index = indexNext(s.Index, len(s.Items))
 
 			return s.mainModel, nil
 
 		case KeyEnter:
 			if s.Items[s.Index] == "Copy login" {
 				if s.Item != nil {
-					_ = clipboard.WriteAll(s.Item.Username)
+					_ = clipboard.WriteAll(s.Item.Login)
 					s.InfoMessage = "login copied to clipboard"
 				}
 
@@ -165,14 +150,18 @@ func (s *PasswordDetailsScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return s.mainModel, nil
 }
 
-func (s *PasswordDetailsScreen) actionBackToList() (tea.Model, tea.Cmd) {
-	s.mainModel.screenPassList.LoadScreen(func() {
-		for i := 0; i < len(s.mainModel.screenPassList.Items); i++ {
-			if s.Item == s.mainModel.screenPassList.Items[i] {
-				s.mainModel.screenPassList.Index = i
-			}
-		}
-	})
+func (s *PasswordDetailsScreen) actionBackToList() (*MainModel, tea.Cmd) {
+	screen := s.mainModel.screenPassList
+
+	s.mainModel.SetCurrentScreen(screen)
+
+	// s.mainModel.screenPassList.LoadScreen(func() {
+	// 	for i := 0; i < len(s.mainModel.screenPassList.Items); i++ {
+	// 		if s.Item == s.mainModel.screenPassList.Items[i] {
+	// 			s.mainModel.screenPassList.Index = i
+	// 		}
+	// 	}
+	// })
 
 	return s.mainModel, nil
 }

@@ -3,23 +3,23 @@ package view
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/mr-filatik/go-goph-keeper/internal/client/service"
 )
 
 // LoginScreen описывает экран входа и необходимые ему данные.
 type LoginScreen struct {
-	mainModel     *ViewModel
+	mainModel     *MainModel
 	LoginInput    textinput.Model
 	PasswordInput textinput.Model
 	ErrMessage    string
 }
 
 // NewLoginScreen создаёт новый экзепляр *LoginScreen.
-func NewLoginScreen(mod *ViewModel) *LoginScreen {
+func NewLoginScreen(mod *MainModel) *LoginScreen {
 	// login input
 	loginInput := textinput.New()
 	loginInput.Placeholder = "your email"
@@ -41,30 +41,8 @@ func NewLoginScreen(mod *ViewModel) *LoginScreen {
 	}
 }
 
-func (s *LoginScreen) LoadScreen(fnc func()) {
-	s.mainModel.screenCurrent = s
-
-	// login input
-	loginInput := textinput.New()
-	loginInput.Placeholder = "your email"
-	loginInput.CharLimit = 64
-	loginInput.Focus()
-
-	// password inputs
-	passInput := textinput.New()
-	passInput.Placeholder = "your password"
-	passInput.CharLimit = 64
-	passInput.EchoMode = textinput.EchoPassword
-	passInput.EchoCharacter = '•'
-
-	s.LoginInput = loginInput
-	s.PasswordInput = passInput
-	s.ErrMessage = ""
-
-	if fnc != nil {
-		fnc()
-	}
-}
+// ValidateScreenData проверяет и корректирует данные для текущего экрана.
+func (s *LoginScreen) ValidateScreenData() {}
 
 // String выводит окно и его содержимое в виде строки.
 func (s *LoginScreen) String() string {
@@ -84,24 +62,18 @@ func (s *LoginScreen) String() string {
 func (s *LoginScreen) GetHints() []Hint {
 	return []Hint{
 		{"Login", []string{KeyEnter}},
-		{"Switch", []string{KeyTab, KeyDown, KeyUp}},
+		{"Switch", []string{KeyTab}},
 		{"Back", []string{KeyEscape}},
-		{"Quit", []string{KeyQuit}},
 	}
 }
 
 // Action описывает логику работы с командами для текущего окна.
-func (s *LoginScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (s *LoginScreen) Action(msg tea.Msg) (*MainModel, tea.Cmd) {
 	key, isKey := msg.(tea.KeyMsg)
 	if isKey {
 		switch key.String() {
-		case KeyQuit:
-			return s.mainModel, tea.Quit
-
 		case KeyEscape:
-			s.mainModel.screenStart.LoadScreen(nil)
-
-			return s.mainModel, nil
+			return s.mainModel.ExitToStartScreen(context.Background())
 
 		case KeyEnter:
 			login := s.LoginInput.Value()
@@ -113,44 +85,9 @@ func (s *LoginScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return s.mainModel, nil
 			}
 
-			ctx, _ := context.WithCancel(context.Background())
+			ctx, cancelFn := context.WithCancel(context.Background())
 
-			// Авторизация пользователя
-			screen := s.mainModel.screenLoading
-
-			screen.title = "Login user"
-			screen.desc = "Login user by email and password"
-
-			screen.OnProgress = func(percent float64, _ string) tea.Cmd {
-				return tea.Tick(RefreshTime, func(time.Time) tea.Msg {
-					return loginStep(ctx, percent, login, password)
-				})
-			}
-
-			screen.OnDone = func(_ any) {
-				s.mainModel.currentUser = &user{Login: login}
-				s.mainModel.screenPassList.LoadScreen(nil)
-			}
-
-			screen.OnCancel = func() {
-				s.LoadScreen(func() {
-					s.mainModel.screenLogin.ErrMessage = "Login canceled"
-					s.mainModel.screenLogin.LoginInput.SetValue(login)
-				})
-			}
-
-			screen.OnError = func(err error) {
-				s.ErrMessage = err.Error()
-				s.LoadScreen(func() {
-					s.mainModel.screenLogin.ErrMessage = "ERROR" + login + password + err.Error()
-				})
-			}
-
-			s.mainModel.SetCurrentScreen(screen)
-
-			return s.mainModel, tea.Tick(RefreshTime, func(time.Time) tea.Msg {
-				return loginStep(ctx, 0, login, password)
-			})
+			return s.login(ctx, login, password, cancelFn)
 
 		case KeyTab, KeyDown, KeyUp:
 			if s.LoginInput.Focused() {
@@ -175,38 +112,130 @@ func (s *LoginScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return s.mainModel, cmd
 }
 
-func loginStep(ctx context.Context, current float64, login, pass string) tea.Msg {
-	select {
-	case <-ctx.Done():
-		return LoadingDoneMsg{Err: context.Canceled}
-	default:
+func (s *LoginScreen) login(
+	ctx context.Context,
+	login, pass string,
+	cancelFn context.CancelFunc,
+) (*MainModel, tea.Cmd) {
+	prevScreen := s.mainModel.screenLogin
+
+	// Авторизация пользователя
+	screen := s.mainModel.screenLoading
+
+	screen.title = "Login user"
+	screen.desc = "Login user by email and password"
+	screen.percent = 0
+	screen.status = "Send request for login..."
+	screen.OnProgress = func(percent float64, _ string) tea.Cmd {
+		return tea.Tick(RefreshTime, func(time.Time) tea.Msg {
+			return s.loginStep(ctx, percent, login, pass)
+		})
+	}
+	screen.OnDone = func(_ any) tea.Cmd {
+		s.mainModel.currentUser = &user{Login: login}
+
+		_, cmd := s.loadPasswords(ctx, cancelFn)
+		s.mainModel.pendingCmd = cmd
+
+		return nil
+	}
+	screen.OnCancel = func() {
+		cancelFn()
+
+		prevScreen.ErrMessage = "operation canceled"
+
+		s.mainModel.SetCurrentScreen(prevScreen)
+	}
+	screen.OnError = func(err error) {
+		prevScreen.ErrMessage = err.Error()
+
+		s.mainModel.SetCurrentScreen(prevScreen)
 	}
 
-	// увеличиваем прогресс и шлём его
-	next := current + 5
-	if next >= 100 {
-		// финал: делайте реальную проверку логина/пароля
-		if login == "demo" && pass == "demo" {
-			return LoadingDoneMsg{Payload: user{Login: login}}
+	s.mainModel.SetCurrentScreen(screen)
+
+	return s.mainModel, tea.Tick(RefreshTime, func(time.Time) tea.Msg {
+		return s.loginStep(ctx, 0, login, pass)
+	})
+}
+
+func (s *LoginScreen) loginStep(ctx context.Context, _ float64, login, pass string) tea.Msg {
+	err := s.mainModel.service.Login(ctx, login, pass)
+	if err != nil {
+		return LoadingDoneMsg{
+			Payload: nil,
+			Err:     err,
 		}
-		return LoadingDoneMsg{Err: fmt.Errorf("invalid credentials %s %s", login, pass)}
 	}
 
-	// промежуточный прогресс — отправляем И планируем следующий тик
-	status := "Authorizing…"
-	switch {
-	case next < 30:
-		status = "Authorizing…"
-	case next < 60:
-		status = "Encrypting…"
-	case next < 90:
-		status = "Syncing…"
-	default:
-		status = "Finalizing…"
+	return LoadingDoneMsg{
+		Payload: nil,
+		Err:     nil,
+	}
+}
+
+func (s *LoginScreen) loadPasswords(
+	ctx context.Context,
+	cancelFn context.CancelFunc,
+) (*MainModel, tea.Cmd) {
+	prevScreen := s.mainModel.screenLogin
+
+	// Авторизация пользователя
+	screen := s.mainModel.screenLoading
+
+	screen.title = "Load passwords"
+	screen.desc = "Load passwords for user " + s.mainModel.currentUser.Login
+	screen.percent = 0
+	screen.status = "Send request for loading..."
+	screen.OnProgress = func(percent float64, _ string) tea.Cmd {
+		return tea.Tick(RefreshTime, func(time.Time) tea.Msg {
+			return s.loadPasswordsStep(ctx)
+		})
+	}
+	screen.OnDone = func(payload any) tea.Cmd {
+		nextScreen := s.mainModel.screenPassList
+
+		items, _ := payload.([]service.Password)
+		if items == nil {
+			items = []service.Password{}
+		}
+		nextScreen.Items = items
+
+		s.mainModel.SetCurrentScreen(nextScreen)
+
+		return tea.Tick(0, func(time.Time) tea.Msg { return nil })
+	}
+	screen.OnCancel = func() {
+		cancelFn()
+
+		prevScreen.ErrMessage = "operation canceled"
+
+		s.mainModel.SetCurrentScreen(prevScreen)
+	}
+	screen.OnError = func(err error) {
+		prevScreen.ErrMessage = err.Error()
+
+		s.mainModel.SetCurrentScreen(prevScreen)
 	}
 
-	return LoadingProgressMsg{
-		Percent: next,
-		Status:  status,
+	s.mainModel.SetCurrentScreen(screen)
+
+	return s.mainModel, tea.Tick(RefreshTime, func(time.Time) tea.Msg {
+		return s.loadPasswordsStep(ctx)
+	})
+}
+
+func (s *LoginScreen) loadPasswordsStep(ctx context.Context) tea.Msg {
+	items, err := s.mainModel.service.GetPasswords(ctx)
+	if err != nil {
+		return LoadingDoneMsg{
+			Payload: []service.Password{},
+			Err:     err,
+		}
+	}
+
+	return LoadingDoneMsg{
+		Payload: items,
+		Err:     nil,
 	}
 }

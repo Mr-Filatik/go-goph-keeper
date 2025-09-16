@@ -2,53 +2,42 @@
 package view
 
 import (
+	"context"
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/mr-filatik/go-goph-keeper/internal/client/service"
 )
 
 // PasswordListScreen описывает экран всех паролей и необходимые ему данные.
 type PasswordListScreen struct {
-	mainModel *ViewModel
-	Index     int
-	Items     []*item
+	mainModel  *MainModel
+	Index      int
+	Items      []service.Password
+	ErrMessage string
 }
 
 // NewPasswordListScreen создаёт новый экзепляр *PasswordListScreen.
-func NewPasswordListScreen(mod *ViewModel) *PasswordListScreen {
+func NewPasswordListScreen(mod *MainModel) *PasswordListScreen {
 	return &PasswordListScreen{
 		mainModel: mod,
 		Index:     0,
-		Items: []*item{ // "[Add new password]"
-			{"GitHub", "Personal account", "vlad", "ghp_example_password", "2FA: TOTP in Authy"},
-			{"GMail", "Work", "vladislav", "gmail_app_password", "App password only"},
-			{"AWS", "Prod account", "admin", "supersecretkey", "Use IAM roles"},
+		Items: []service.Password{ // "[Add new password]"
+			{"1", "GitHub", "Personal account", "vlad", "ghp_example_password", "2FA: TOTP in Authy"},
+			{"2", "GMail", "Work", "vladislav", "gmail_app_password", "App password only"},
+			{"3", "AWS", "Prod account", "admin", "supersecretkey", "Use IAM roles"},
 		},
 	}
 }
 
-func (s *PasswordListScreen) LoadScreen(fnc func()) {
-	s.mainModel.screenCurrent = s
-
-	s.Index = 0
-	// s.Items = []*item{
-	// 	{"GitHub", "Personal account", "vlad", "ghp_example_password", "2FA: TOTP in Authy"},
-	// 	{"GMail", "Work", "vladislav", "gmail_app_password", "App password only"},
-	// 	{"AWS", "Prod account", "admin", "supersecretkey", "Use IAM roles"},
-	// }
-
-	if fnc != nil {
-		fnc()
+// ValidateScreenData проверяет и корректирует данные для текущего экрана.
+func (s *PasswordListScreen) ValidateScreenData() {
+	if len(s.Items) == 0 {
+		s.Index = -1
 	}
 
-	min := 0
-	if s.Index < min {
-		s.Index = min
-	}
-
-	max := len(s.Items) - 1
-	if s.Index > max {
-		s.Index = max
+	if s.Index > len(s.Items)-1 {
+		s.Index = len(s.Items) - 1
 	}
 }
 
@@ -56,13 +45,24 @@ func (s *PasswordListScreen) LoadScreen(fnc func()) {
 func (s *PasswordListScreen) String() string {
 	view := "\n[Password List] Select password:\n"
 
-	for index := range s.Items {
+	for index := -1; index < len(s.Items); index++ {
 		cursor := " "
+
 		if index == s.Index {
 			cursor = ">"
 		}
 
+		if index == -1 {
+			view += fmt.Sprintf("%s %s\n", cursor, "Add new password")
+
+			continue
+		}
+
 		view += fmt.Sprintf("%s %s\n", cursor, s.Items[index].Title)
+	}
+
+	if s.ErrMessage != "" {
+		view += "\n[ERROR]: " + s.ErrMessage + "\n"
 	}
 
 	return view
@@ -74,42 +74,41 @@ func (s *PasswordListScreen) GetHints() []Hint {
 		{"Login", []string{KeyEnter}},
 		{"Next", []string{KeyDown}},
 		{"Previous", []string{KeyUp}},
-		{"Back", []string{KeyEscape}},
-		{"Quit", []string{KeyQuit}},
+		{"Exit", []string{KeyEscape}},
 	}
 }
 
 // Action описывает логику работы с командами для текущего окна.
-func (s *PasswordListScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (s *PasswordListScreen) Action(msg tea.Msg) (*MainModel, tea.Cmd) {
 	if key, isKey := msg.(tea.KeyMsg); isKey {
 		switch key.String() {
-		case KeyQuit:
-			return s.mainModel, tea.Quit
+		case KeyEscape:
+			return s.mainModel.ExitToStartScreen(context.Background())
 
 		case KeyUp:
-			if s.Index > 0 {
-				s.Index--
-			}
+			// дополнительный пункт "Add new password" с индексом -1.
+			s.Index = indexPrevWithCustomLimit(s.Index, -1)
 
 			return s.mainModel, nil
 
 		case KeyDown:
-			if s.Index < len(s.Items)-1 {
-				s.Index++
-			}
+			s.Index = indexNext(s.Index, len(s.Items))
 
 			return s.mainModel, nil
 
 		case KeyEnter:
-			s.mainModel.screenPassDetails.LoadScreen(func() {
-				s.mainModel.screenPassDetails.Item = s.Items[s.Index]
-			})
+			// дополнительный пункт "Add new password" с индексом -1.
+			if s.Index == -1 {
+				return s.mainModel, nil
+			}
+
+			screen := s.mainModel.screenPassDetails
+
+			screen.Item = &s.Items[s.Index]
+
+			s.mainModel.SetCurrentScreen(screen)
 
 			return s.mainModel, nil
-
-			// s.mainModel.selected = &s.mainModel.items[s.mainModel.listIndex]
-			// s.mainModel.currentScreen = screenPasswordDetails
-			// s.mainModel.statusMsg = "Opened details"
 		}
 	}
 

@@ -9,13 +9,13 @@ import (
 
 // StartScreen описывает начальный экран приложения и необходимые ему данные.
 type StartScreen struct {
-	mainModel *ViewModel
+	mainModel *MainModel
 	Index     int
 	Items     []string
 }
 
 // NewStartScreen создаёт новый экзепляр *StartScreen.
-func NewStartScreen(mod *ViewModel) *StartScreen {
+func NewStartScreen(mod *MainModel) *StartScreen {
 	return &StartScreen{
 		mainModel: mod,
 		Index:     0,
@@ -27,15 +27,8 @@ func NewStartScreen(mod *ViewModel) *StartScreen {
 	}
 }
 
-func (s *StartScreen) LoadScreen(fnc func()) {
-	s.mainModel.screenCurrent = s
-
-	s.Index = 0
-
-	if fnc != nil {
-		fnc()
-	}
-
+// ValidateScreenData проверяет и корректирует данные для текущего экрана.
+func (s *StartScreen) ValidateScreenData() {
 	min := 0
 	if s.Index < min {
 		s.Index = min
@@ -68,28 +61,26 @@ func (s *StartScreen) GetHints() []Hint {
 	return []Hint{
 		{"Select", []string{KeyEnter}},
 		{"Switch", []string{KeyTab}},
-		{"Next", []string{KeyDown}},
-		{"Previous", []string{KeyUp}},
-		{"Quit", []string{KeyEscape, KeyQuit}},
+		{"Quit", []string{KeyEscape}},
 	}
 }
 
 // Action описывает логику работы с командами для текущего окна.
-func (s *StartScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (s *StartScreen) Action(msg tea.Msg) (*MainModel, tea.Cmd) {
 	if key, isKey := msg.(tea.KeyMsg); isKey {
 		switch key.String() {
-		case KeyEscape, KeyQuit:
+		case KeyEscape:
 			return s.mainModel, tea.Quit
 
 		case KeyEnter:
 			if s.Items[s.Index] == "Login" {
-				s.mainModel.screenLogin.LoadScreen(nil)
+				s.mainModel.SetCurrentScreen(s.mainModel.screenLogin)
 
 				return s.mainModel, nil
 			}
 
 			if s.Items[s.Index] == "Register" {
-				s.mainModel.screenRegister.LoadScreen(nil)
+				s.mainModel.SetCurrentScreen(s.mainModel.screenRegister)
 
 				return s.mainModel, nil
 			}
@@ -101,25 +92,17 @@ func (s *StartScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return s.mainModel, nil
 
 		case KeyTab:
-			if s.Index < len(s.Items)-1 {
-				s.Index++
-			} else {
-				s.Index = 0
-			}
+			s.Index = indexSwitch(s.Index, len(s.Items))
 
 			return s.mainModel, nil
 
 		case KeyUp:
-			if s.Index > 0 {
-				s.Index--
-			}
+			s.Index = indexPrev(s.Index)
 
 			return s.mainModel, nil
 
 		case KeyDown:
-			if s.Index < len(s.Items)-1 {
-				s.Index++
-			}
+			s.Index = indexNext(s.Index, len(s.Items))
 
 			return s.mainModel, nil
 		}

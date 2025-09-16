@@ -2,7 +2,6 @@
 package view
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -33,45 +32,38 @@ type (
 
 // LoadingScreen описывает экран загрузки и необходимые ему данные.
 type LoadingScreen struct {
-	mainModel *ViewModel
+	mainModel *MainModel
 
-	// отображение
 	title   string
 	desc    string
 	percent float64
 	status  string
 
-	cancel context.CancelFunc
-
-	// фабрика команды: получит ctx с возможностью отмены
-	Start func(ctx context.Context) tea.Cmd
-
-	// колбэки вызывающей стороны (всё поведение — тут)
-	OnProgress func(percent float64, status string) tea.Cmd
-	OnDone     func(payload any) // успех
-	OnError    func(err error)   // ошибка
-	OnCancel   func()            // отмена (Esc/с)
+	OnProgress func(percent float64, status string) tea.Cmd // изменение статуса или прогресса операции
+	OnDone     func(payload any) tea.Cmd                    // завершение операции с успехом
+	OnError    func(err error)                              // завершение операции с ошибкой
+	OnCancel   func()                                       // отмена операции
 }
 
 // NewLoadingScreen создаёт новый экзепляр *LoadingScreen.
-func NewLoadingScreen(m *ViewModel) *LoadingScreen {
+func NewLoadingScreen(m *MainModel) *LoadingScreen {
 	return &LoadingScreen{
-		mainModel: m,
+		mainModel:  m,
+		title:      "title",
+		desc:       "desc",
+		percent:    0,
+		status:     "status",
+		OnProgress: nil,
+		OnDone:     nil,
+		OnError:    nil,
+		OnCancel:   nil,
 	}
 }
 
-// LoadScreen требует указания LoadingParams
-func (s *LoadingScreen) LoadScreen(fnc func()) {
-	s.mainModel.screenCurrent = s
-	// s.mainModel.screenCurrent = s // сделать так и убрать лишний возврат
-
-	s.title = "none"
-	s.desc = "none"
-	s.percent = 0
-	s.status = "Starting…"
-
-	if fnc != nil {
-		fnc()
+// ValidateScreenData проверяет и корректирует данные для текущего экрана.
+func (s *LoadingScreen) ValidateScreenData() {
+	if s.percent < 0 {
+		s.percent = 0
 	}
 }
 
@@ -99,7 +91,7 @@ func (s *LoadingScreen) GetHints() []Hint {
 }
 
 // Action описывает логику работы с командами для текущего окна.
-func (s *LoadingScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (s *LoadingScreen) Action(msg tea.Msg) (*MainModel, tea.Cmd) {
 	switch msgType := msg.(type) {
 	case LoadingProgressMsg:
 		s.percent = msgType.Percent
@@ -108,24 +100,22 @@ func (s *LoadingScreen) Action(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return s.mainModel, s.OnProgress(s.percent, s.status)
 
 	case LoadingDoneMsg:
-		// очистим cancel; дальше — отдаём поведение наружу
-		s.cancel = nil
 		if msgType.Err != nil {
 			if s.OnError != nil {
 				s.OnError(msgType.Err)
 			}
 		} else {
 			if s.OnDone != nil {
-				s.OnDone(msgType.Payload)
+				cmd := s.OnDone(msgType.Payload)
+
+				return s.mainModel, cmd
 			}
 		}
 
 		return s.mainModel, nil
 
 	case tea.KeyMsg:
-		switch msgType.String() {
-		case KeyEscape:
-			// отменим и выйдем
+		if msgType.String() == KeyEscape {
 			if s.OnCancel != nil {
 				s.OnCancel()
 			}
