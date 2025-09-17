@@ -4,7 +4,6 @@ package view
 import (
 	"fmt"
 
-	"github.com/atotto/clipboard"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mr-filatik/go-goph-keeper/internal/client/service"
 )
@@ -16,6 +15,7 @@ type PasswordEditScreen struct {
 	Items       []string
 	Item        *service.Password
 	InfoMessage string
+	IsCreate    bool
 }
 
 // NewPasswordEditScreen создаёт новый экзепляр *PasswordEditScreen.
@@ -25,24 +25,38 @@ func NewPasswordEditScreen(mod *MainModel) *PasswordEditScreen {
 		Index:     0,
 		Items: []string{
 			"Back to details",
-			"Edit",
+			"Edit", // если создаётся заново, то кнопки другие Add вместо Edit Remove
 			"Remove",
 		},
 		Item:        nil,
 		InfoMessage: "",
+		IsCreate:    false,
 	}
 }
 
 // ValidateScreenData проверяет и корректирует данные для текущего экрана.
 func (s *PasswordEditScreen) ValidateScreenData() {
-	min := 0
-	if s.Index < min {
-		s.Index = min
+	minLimit := 0
+	if s.Index < minLimit {
+		s.Index = minLimit
 	}
 
-	max := len(s.Items) - 1
-	if s.Index > max {
-		s.Index = max
+	maxLimit := len(s.Items) - 1
+	if s.Index > maxLimit {
+		s.Index = maxLimit
+	}
+
+	if s.IsCreate {
+		s.Items = []string{
+			"Create",
+			"Back to details",
+		}
+	} else {
+		s.Items = []string{
+			"Back to details",
+			"Edit",
+			"Remove",
+		}
 	}
 }
 
@@ -85,16 +99,18 @@ func (s *PasswordEditScreen) GetHints() []Hint {
 		{"Next", []string{KeyDown}},
 		{"Previous", []string{KeyUp}},
 		{"Back", []string{KeyEscape}},
-		//ctrl+c = save
+		// ctrl+c = save
 	}
 }
 
-// Action описывает логику работы с командами для текущего окна.
-func (s *PasswordEditScreen) Action(msg tea.Msg) (*MainModel, tea.Cmd) {
+// Update описывает логику работы с командами для текущего окна.
+func (s *PasswordEditScreen) Update(msg tea.Msg) (*MainModel, tea.Cmd) {
 	if key, isKey := msg.(tea.KeyMsg); isKey {
 		switch key.String() {
 		case KeyEscape:
-			return s.actionBackToList()
+			s.actionBackToDetails()
+
+			return s.mainModel, nil
 
 		case KeyUp:
 			s.Index = indexPrev(s.Index)
@@ -107,42 +123,11 @@ func (s *PasswordEditScreen) Action(msg tea.Msg) (*MainModel, tea.Cmd) {
 			return s.mainModel, nil
 
 		case KeyEnter:
-			if s.Items[s.Index] == "Copy login" {
-				if s.Item != nil {
-					_ = clipboard.WriteAll(s.Item.Login)
-					s.InfoMessage = "login copied to clipboard"
-				}
-
-				return s.mainModel, nil
-			}
-
-			if s.Items[s.Index] == "Copy password" {
-				if s.Item != nil {
-					_ = clipboard.WriteAll(s.Item.Password)
-					s.InfoMessage = "password copied to clipboard"
-				}
-
-				return s.mainModel, nil
-			}
-
-			if s.Items[s.Index] == "Edit" {
-				// s.mainModel.screenCurrent = s.mainModel.screenRegister.LoadScreen(nil)
-
-				return s.mainModel, nil
-			}
-
-			if s.Items[s.Index] == "Back to list" {
-				return s.actionBackToList()
-			}
+			s.enter()
 
 			return s.mainModel, nil
 
 		case KeyCopy:
-			if s.Item != nil {
-				_ = clipboard.WriteAll(s.Item.Password)
-				s.InfoMessage = "password copied to clipboard"
-			}
-
 			return s.mainModel, nil
 		}
 	}
@@ -150,18 +135,37 @@ func (s *PasswordEditScreen) Action(msg tea.Msg) (*MainModel, tea.Cmd) {
 	return s.mainModel, nil
 }
 
-func (s *PasswordEditScreen) actionBackToList() (*MainModel, tea.Cmd) {
-	screen := s.mainModel.screenPassList
+func (s *PasswordEditScreen) enter() {
+	if s.Items[s.Index] == "Create" {
+		// logic
+		_ = s.IsCreate
+	}
+
+	if s.Items[s.Index] == "Back to details" {
+		if s.IsCreate {
+			screen := s.mainModel.screenPassList
+
+			s.mainModel.SetCurrentScreen(screen)
+		} else {
+			s.actionBackToDetails()
+		}
+	}
+
+	if s.Items[s.Index] == "Edit" {
+		// logic
+		_ = s.IsCreate
+	}
+
+	if s.Items[s.Index] == "Remove" {
+		// logic
+		_ = s.IsCreate
+	}
+}
+
+func (s *PasswordEditScreen) actionBackToDetails() {
+	screen := s.mainModel.screenPassDetails
+
+	screen.Item = s.Item
 
 	s.mainModel.SetCurrentScreen(screen)
-
-	// s.mainModel.screenPassList.LoadScreen(func() {
-	// 	for i := 0; i < len(s.mainModel.screenPassList.Items); i++ {
-	// 		if s.Item == s.mainModel.screenPassList.Items[i] {
-	// 			s.mainModel.screenPassList.Index = i
-	// 		}
-	// 	}
-	// })
-
-	return s.mainModel, nil
 }

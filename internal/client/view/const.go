@@ -15,3 +15,10 @@ const (
 	// Элементы для выхода.
 	KeyEscape = "esc"
 )
+
+// зарефакторить каким-то образом работу с шагами алгоритмов.
+const (
+	stepInit = iota
+	stepOne
+	stepTwo
+)

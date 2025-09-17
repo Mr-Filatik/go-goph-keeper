@@ -29,14 +29,14 @@ func NewStartScreen(mod *MainModel) *StartScreen {
 
 // ValidateScreenData проверяет и корректирует данные для текущего экрана.
 func (s *StartScreen) ValidateScreenData() {
-	min := 0
-	if s.Index < min {
-		s.Index = min
+	minLimit := 0
+	if s.Index < minLimit {
+		s.Index = minLimit
 	}
 
-	max := len(s.Items) - 1
-	if s.Index > max {
-		s.Index = max
+	maxLimit := len(s.Items) - 1
+	if s.Index > maxLimit {
+		s.Index = maxLimit
 	}
 }
 

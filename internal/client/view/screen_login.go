@@ -1,4 +1,6 @@
 // Package view содержит логику для работы с пользовательским интерфейсом.
+//
+//nolint:dupl // сейчас выглядит как дупликат screen_register, но набор полей должен быть разным.
 package view
 
 import (
@@ -16,7 +18,8 @@ type LoginScreen struct {
 	LoginInput    textinput.Model
 	PasswordInput textinput.Model
 	ErrMessage    string
-	step          int
+	step          int // шаги для последовательных действий (1 - первое, 2 - второе)
+	stepMax       int // всего шагов в последовательности действий
 }
 
 // NewLoginScreen создаёт новый экзепляр *LoginScreen.
@@ -39,13 +42,14 @@ func NewLoginScreen(mod *MainModel) *LoginScreen {
 		LoginInput:    loginInput,
 		PasswordInput: passInput,
 		ErrMessage:    "",
-		step:          0,
+		step:          stepInit,
+		stepMax:       1,
 	}
 }
 
 // ValidateScreenData проверяет и корректирует данные для текущего экрана.
 func (s *LoginScreen) ValidateScreenData() {
-	s.step = 0
+	s.step = stepInit
 }
 
 // String выводит окно и его содержимое в виде строки.
@@ -89,54 +93,9 @@ func (s *LoginScreen) Update(msg tea.Msg) (*MainModel, tea.Cmd) {
 				return s.mainModel, nil
 			}
 
-			ctx, cancelFn := context.WithCancel(context.Background())
+			ctx := context.Background()
 
-			prevScreen := s.mainModel.screenLogin
-			screen := s.mainModel.screenLoading
-
-			screen.title = "Login user"
-			screen.desc = "Login user by email and password"
-			screen.percent = 0
-			screen.status = "Send request for login..."
-			screen.OnProgress = func(percent float64, _ string) tea.Cmd {
-				return s.actionCmd(ctx, login, password)
-				// return tea.Tick(0, func(time.Time) tea.Msg {
-				// 	return s.actionCmd(ctx, cancelFn, login, password) // s.loginStep(ctx, percent, login, password)
-				// })
-			}
-			screen.OnDone = func(payload any) {
-				s.mainModel.currentUser = &user{Login: login}
-
-				next := s.mainModel.screenPassList
-
-				items, _ := payload.([]service.Password)
-				if items != nil {
-					next.Items = items
-				} else {
-					next.Items = []service.Password{}
-				}
-
-				s.mainModel.SetCurrentScreen(next)
-				// return tea.Tick(0, func(time.Time) tea.Msg {
-				// 	return s.actionCmd(ctx, cancelFn, login, password) // s.loginStep(ctx, percent, login, password)
-				// })
-			}
-			screen.OnCancel = func() {
-				cancelFn()
-
-				prevScreen.ErrMessage = "operation canceled"
-
-				s.mainModel.SetCurrentScreen(prevScreen)
-			}
-			screen.OnError = func(err error) {
-				prevScreen.ErrMessage = err.Error()
-
-				s.mainModel.SetCurrentScreen(prevScreen)
-			}
-
-			s.mainModel.SetCurrentScreen(screen)
-
-			// screen.action = s.actionCmd(ctx, cancelFn, login, password)
+			s.initAction(ctx, login, password)
 
 			return s.mainModel, s.actionCmd(ctx, login, password)
 
@@ -163,6 +122,54 @@ func (s *LoginScreen) Update(msg tea.Msg) (*MainModel, tea.Cmd) {
 	return s.mainModel, cmd
 }
 
+func (s *LoginScreen) initAction(inctx context.Context, login, password string) {
+	ctx, cancelFn := context.WithCancel(inctx)
+
+	s.step = 0
+	s.stepMax = 2
+
+	loadScreen := s.mainModel.screenLoading
+
+	loadScreen.title = "Login user"
+	loadScreen.desc = "Login user by email and password"
+	loadScreen.percent = 0
+	loadScreen.status = "Send request for login..."
+	loadScreen.OnProgress = func(_ float64, _ string) tea.Cmd {
+		return s.actionCmd(ctx, login, password)
+	}
+	loadScreen.OnDone = func(payload any) {
+		s.mainModel.currentUser = &user{Login: login}
+
+		nextScreen := s.mainModel.screenPassList
+
+		items, _ := payload.([]service.Password)
+		if items != nil {
+			nextScreen.Items = items
+		} else {
+			nextScreen.Items = []service.Password{}
+		}
+
+		s.mainModel.SetCurrentScreen(nextScreen)
+	}
+
+	prevScreen := s.mainModel.screenLogin
+
+	loadScreen.OnCancel = func() {
+		cancelFn()
+
+		prevScreen.ErrMessage = "operation canceled"
+
+		s.mainModel.SetCurrentScreen(prevScreen)
+	}
+	loadScreen.OnError = func(err error) {
+		prevScreen.ErrMessage = err.Error()
+
+		s.mainModel.SetCurrentScreen(prevScreen)
+	}
+
+	s.mainModel.SetCurrentScreen(loadScreen)
+}
+
 func (s *LoginScreen) actionCmd(
 	ctx context.Context,
 	login string,
@@ -170,26 +177,47 @@ func (s *LoginScreen) actionCmd(
 ) tea.Cmd {
 	return func() tea.Msg {
 		switch s.step {
-		case 0:
-			// шаг 1: авторизация
-			if err := s.mainModel.service.Login(ctx, login, pass); err != nil {
-				return LoadingDoneMsg{Err: fmt.Errorf("авторизация: %w", err)}
+		case stepInit:
+			s.step = stepOne
+
+			return LoadingProgressMsg{
+				Percent: float64(s.step-1) / float64(s.stepMax),
+				Status:  "Login user by email and password…",
 			}
-			s.step = 1
-			return LoadingProgressMsg{Percent: 0.3, Status: "Загрузка данных…"}
 
 		case 1:
-			// шаг 2: загрузка паролей
+			if err := s.mainModel.service.Login(ctx, login, pass); err != nil {
+				return LoadingDoneMsg{
+					Err:     fmt.Errorf("authorization: %w", err),
+					Payload: nil,
+				}
+			}
+
+			s.step = stepTwo
+
+			return LoadingProgressMsg{
+				Percent: float64(s.step-1) / float64(s.stepMax),
+				Status:  "Loading data…",
+			}
+
+		case stepTwo:
 			items, err := s.mainModel.service.GetPasswords(ctx)
 			if err != nil {
-				return LoadingDoneMsg{Err: fmt.Errorf("загрузка данных: %w", err)}
+				return LoadingDoneMsg{
+					Payload: nil,
+					Err:     fmt.Errorf("loading data: %w", err),
+				}
 			}
-			// успех
-			//s.step = 2
-			// return LoadingProgressMsg{Percent: 0.8, Status: "Обработка загруженных данных…"}
-			return LoadingDoneMsg{Payload: items, Err: nil}
+
+			return LoadingDoneMsg{
+				Payload: items,
+				Err:     nil,
+			}
 		}
-		// запасной случай
-		return LoadingDoneMsg{Payload: nil, Err: nil}
+
+		return LoadingDoneMsg{
+			Payload: nil,
+			Err:     nil,
+		}
 	}
 }

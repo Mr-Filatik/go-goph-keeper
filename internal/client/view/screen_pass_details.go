@@ -36,14 +36,14 @@ func NewPasswordDetailsScreen(mod *MainModel) *PasswordDetailsScreen {
 
 // ValidateScreenData проверяет и корректирует данные для текущего экрана.
 func (s *PasswordDetailsScreen) ValidateScreenData() {
-	min := 0
-	if s.Index < min {
-		s.Index = min
+	minLimit := 0
+	if s.Index < minLimit {
+		s.Index = minLimit
 	}
 
-	max := len(s.Items) - 1
-	if s.Index > max {
-		s.Index = max
+	maxLimit := len(s.Items) - 1
+	if s.Index > maxLimit {
+		s.Index = maxLimit
 	}
 }
 
@@ -91,77 +91,75 @@ func (s *PasswordDetailsScreen) GetHints() []Hint {
 
 // Update описывает логику работы с командами для текущего окна.
 func (s *PasswordDetailsScreen) Update(msg tea.Msg) (*MainModel, tea.Cmd) {
-	if key, isKey := msg.(tea.KeyMsg); isKey {
-		switch key.String() {
-		case KeyEscape:
-			return s.actionBackToList()
+	key, isKey := msg.(tea.KeyMsg)
+	if !isKey {
+		return s.mainModel, nil
+	}
 
-		case KeyUp:
-			s.Index = indexPrev(s.Index)
+	switch key.String() {
+	case KeyEscape:
+		s.actionBackToList()
 
-			return s.mainModel, nil
+		return s.mainModel, nil
 
-		case KeyDown:
-			s.Index = indexNext(s.Index, len(s.Items))
+	case KeyUp:
+		s.Index = indexPrev(s.Index)
 
-			return s.mainModel, nil
+		return s.mainModel, nil
 
-		case KeyEnter:
-			if s.Items[s.Index] == "Copy login" {
-				if s.Item != nil {
-					_ = clipboard.WriteAll(s.Item.Login)
-					s.InfoMessage = "login copied to clipboard"
-				}
+	case KeyDown:
+		s.Index = indexNext(s.Index, len(s.Items))
 
-				return s.mainModel, nil
-			}
+		return s.mainModel, nil
 
-			if s.Items[s.Index] == "Copy password" {
-				if s.Item != nil {
-					_ = clipboard.WriteAll(s.Item.Password)
-					s.InfoMessage = "password copied to clipboard"
-				}
+	case KeyEnter:
+		s.enter()
 
-				return s.mainModel, nil
-			}
+		return s.mainModel, nil
 
-			if s.Items[s.Index] == "Edit" {
-				// s.mainModel.screenCurrent = s.mainModel.screenRegister.LoadScreen(nil)
-
-				return s.mainModel, nil
-			}
-
-			if s.Items[s.Index] == "Back to list" {
-				return s.actionBackToList()
-			}
-
-			return s.mainModel, nil
-
-		case KeyCopy:
-			if s.Item != nil {
-				_ = clipboard.WriteAll(s.Item.Password)
-				s.InfoMessage = "password copied to clipboard"
-			}
-
-			return s.mainModel, nil
+	case KeyCopy:
+		if s.Item != nil {
+			_ = clipboard.WriteAll(s.Item.Password)
+			s.InfoMessage = "password copied to clipboard"
 		}
+
+		return s.mainModel, nil
 	}
 
 	return s.mainModel, nil
 }
 
-func (s *PasswordDetailsScreen) actionBackToList() (*MainModel, tea.Cmd) {
+func (s *PasswordDetailsScreen) enter() {
+	if s.Items[s.Index] == "Copy login" {
+		if s.Item != nil {
+			_ = clipboard.WriteAll(s.Item.Login)
+			s.InfoMessage = "login copied to clipboard"
+		}
+	}
+
+	if s.Items[s.Index] == "Copy password" {
+		if s.Item != nil {
+			_ = clipboard.WriteAll(s.Item.Password)
+			s.InfoMessage = "password copied to clipboard"
+		}
+	}
+
+	if s.Items[s.Index] == "Edit" {
+		screen := s.mainModel.screenPassEdit
+
+		screen.IsCreate = false
+		screen.Item = s.Item
+
+		s.mainModel.SetCurrentScreen(screen)
+	}
+
+	if s.Items[s.Index] == "Back to list" {
+		s.actionBackToList()
+	}
+}
+
+func (s *PasswordDetailsScreen) actionBackToList() {
 	screen := s.mainModel.screenPassList
 
 	s.mainModel.SetCurrentScreen(screen)
-
-	// s.mainModel.screenPassList.LoadScreen(func() {
-	// 	for i := 0; i < len(s.mainModel.screenPassList.Items); i++ {
-	// 		if s.Item == s.mainModel.screenPassList.Items[i] {
-	// 			s.mainModel.screenPassList.Index = i
-	// 		}
-	// 	}
-	// })
-
-	return s.mainModel, nil
 }

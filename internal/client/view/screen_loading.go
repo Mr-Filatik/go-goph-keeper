@@ -115,7 +115,6 @@ func (s *LoadingScreen) Update(msg tea.Msg) (*MainModel, tea.Cmd) {
 		}
 
 		return s.mainModel, nil
-		// return s.mainModel, tea.Quit // here
 
 	case tea.KeyMsg:
 		if msgType.String() == KeyEscape {

@@ -20,13 +20,10 @@ type PasswordListScreen struct {
 // NewPasswordListScreen создаёт новый экзепляр *PasswordListScreen.
 func NewPasswordListScreen(mod *MainModel) *PasswordListScreen {
 	return &PasswordListScreen{
-		mainModel: mod,
-		Index:     0,
-		Items: []service.Password{ // "[Add new password]"
-			{"1", "GitHub", "Personal account", "vlad", "ghp_example_password", "2FA: TOTP in Authy"},
-			{"2", "GMail", "Work", "vladislav", "gmail_app_password", "App password only"},
-			{"3", "AWS", "Prod account", "admin", "supersecretkey", "Use IAM roles"},
-		},
+		mainModel:  mod,
+		Index:      0,
+		Items:      []service.Password{}, // + "[Add new password]"
+		ErrMessage: "",
 	}
 }
 
@@ -99,6 +96,20 @@ func (s *PasswordListScreen) Update(msg tea.Msg) (*MainModel, tea.Cmd) {
 		case KeyEnter:
 			// дополнительный пункт "Add new password" с индексом -1.
 			if s.Index == -1 {
+				screen := s.mainModel.screenPassEdit
+
+				screen.IsCreate = true
+				screen.Item = &service.Password{
+					ID:          "",
+					Title:       "",
+					Description: "",
+					Login:       "",
+					Password:    "",
+					Notes:       "",
+				}
+
+				s.mainModel.SetCurrentScreen(screen)
+
 				return s.mainModel, nil
 			}
 
