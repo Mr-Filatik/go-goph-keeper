@@ -15,8 +15,8 @@ type IScreen interface {
 	// GetHints возвращает список подсказок для данного экрана.
 	GetHints() []Hint
 
-	// Action описывает все действия для данного окна.
-	Action(msg tea.Msg) (*MainModel, tea.Cmd)
+	// Update описывает все действия для данного окна.
+	Update(msg tea.Msg) (*MainModel, tea.Cmd)
 
 	// ValidateScreenData проверяет и корректирует данные для текущего экрана.
 	ValidateScreenData()

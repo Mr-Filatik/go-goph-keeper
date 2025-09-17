@@ -66,8 +66,8 @@ func (s *RegisterScreen) GetHints() []Hint {
 	}
 }
 
-// Action описывает логику работы с командами для текущего окна.
-func (s *RegisterScreen) Action(msg tea.Msg) (*MainModel, tea.Cmd) {
+// Update описывает логику работы с командами для текущего окна.
+func (s *RegisterScreen) Update(msg tea.Msg) (*MainModel, tea.Cmd) {
 	key, isKey := msg.(tea.KeyMsg)
 	if isKey {
 		switch key.String() {
@@ -100,10 +100,9 @@ func (s *RegisterScreen) Action(msg tea.Msg) (*MainModel, tea.Cmd) {
 					return s.registerStep(ctx, percent, login, password)
 				})
 			}
-			screen.OnDone = func(_ any) tea.Cmd {
+			screen.OnDone = func(_ any) {
 				s.mainModel.currentUser = &user{Login: login}
 				s.mainModel.SetCurrentScreen(s.mainModel.screenPassList)
-				return nil
 			}
 			screen.OnCancel = func() {
 				cancelFn()

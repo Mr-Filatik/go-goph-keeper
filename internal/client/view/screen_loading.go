@@ -40,7 +40,7 @@ type LoadingScreen struct {
 	status  string
 
 	OnProgress func(percent float64, status string) tea.Cmd // изменение статуса или прогресса операции
-	OnDone     func(payload any) tea.Cmd                    // завершение операции с успехом
+	OnDone     func(payload any)                            // завершение операции с успехом
 	OnError    func(err error)                              // завершение операции с ошибкой
 	OnCancel   func()                                       // отмена операции
 }
@@ -72,7 +72,7 @@ func (s *LoadingScreen) String() string {
 	builder := &strings.Builder{}
 	fmt.Fprintf(builder, "\n[%s]\n%s\n", s.title, s.desc)
 
-	if s.percent > 0 {
+	if s.percent >= 0 {
 		fmt.Fprintf(builder, "\n[PERCENT]: %.1f%%\n", s.percent)
 	}
 
@@ -90,8 +90,8 @@ func (s *LoadingScreen) GetHints() []Hint {
 	}
 }
 
-// Action описывает логику работы с командами для текущего окна.
-func (s *LoadingScreen) Action(msg tea.Msg) (*MainModel, tea.Cmd) {
+// Update описывает логику работы с командами для текущего окна.
+func (s *LoadingScreen) Update(msg tea.Msg) (*MainModel, tea.Cmd) {
 	switch msgType := msg.(type) {
 	case LoadingProgressMsg:
 		s.percent = msgType.Percent
@@ -103,16 +103,19 @@ func (s *LoadingScreen) Action(msg tea.Msg) (*MainModel, tea.Cmd) {
 		if msgType.Err != nil {
 			if s.OnError != nil {
 				s.OnError(msgType.Err)
+
+				return s.mainModel, nil
 			}
 		} else {
 			if s.OnDone != nil {
-				cmd := s.OnDone(msgType.Payload)
+				s.OnDone(msgType.Payload)
 
-				return s.mainModel, cmd
+				return s.mainModel, nil
 			}
 		}
 
 		return s.mainModel, nil
+		// return s.mainModel, tea.Quit // here
 
 	case tea.KeyMsg:
 		if msgType.String() == KeyEscape {

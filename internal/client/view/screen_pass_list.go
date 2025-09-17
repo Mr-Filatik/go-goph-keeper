@@ -78,8 +78,8 @@ func (s *PasswordListScreen) GetHints() []Hint {
 	}
 }
 
-// Action описывает логику работы с командами для текущего окна.
-func (s *PasswordListScreen) Action(msg tea.Msg) (*MainModel, tea.Cmd) {
+// Update описывает логику работы с командами для текущего окна.
+func (s *PasswordListScreen) Update(msg tea.Msg) (*MainModel, tea.Cmd) {
 	if key, isKey := msg.(tea.KeyMsg); isKey {
 		switch key.String() {
 		case KeyEscape:

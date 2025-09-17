@@ -1,4 +1,4 @@
-// Package vault предоставляет функционал для обработчиков middleware.
+// Package middleware предоставляет функционал для обработчиков middleware.
 package middleware
 
 import (

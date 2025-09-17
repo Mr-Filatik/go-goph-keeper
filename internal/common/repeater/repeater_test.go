@@ -252,3 +252,47 @@ func TestRun_CanceledFromOutside(t *testing.T) {
 
 	_ = events
 }
+
+// attempts := 0
+// maxAttempts := 5
+
+// rep := repeater.New[string, string]().
+// 	SetCondition(func(err error) bool {
+// 		return err == nil // повторять, пока не будет nil
+// 	}).
+// 	SetFunc(func(ctx context.Context, s string) (string, error) {
+// 		select {
+// 		case <-ctx.Done():
+// 			return "", ctx.Err() // будет context.DeadlineExceeded при пер-таймауте
+// 		case <-time.After(2 * time.Second): // «задержка» операции
+// 		}
+
+// 		attempts++
+// 		if attempts < maxAttempts {
+// 			return "", errors.New("temp error")
+// 		}
+// 		return s, nil
+// 	}).
+// 	SetDurationLimit(1*time.Second, 10*time.Second)
+
+// ctx, cancelFn := context.WithCancel(exitCtx)
+// defer cancelFn()
+
+// doneCh, retryCh := rep.Run(ctx, "input")
+
+// for {
+// 	select {
+// 	case ev, ok := <-retryCh:
+// 		if ok {
+// 			msg := fmt.Sprintf("Repeat %d, wait %s", ev.Attempt, ev.Wait)
+// 			log.Warn(msg, ev.Err)
+// 		}
+// 	case fin := <-doneCh:
+// 		if fin.Err != nil {
+// 			log.Error("Done with error", fin.Err) // context.DeadlineExceeded / attempts over / ваша ошибка
+// 		} else {
+// 			log.Info("Done with result " + fin.Result)
+// 		}
+// 		return
+// 	}
+// }

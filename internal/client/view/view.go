@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/mr-filatik/go-goph-keeper/internal/client/service/memory"
+	"github.com/mr-filatik/go-goph-keeper/internal/client/service"
 )
 
 // MainModel описывает модель для отображения данных в консоли.
@@ -24,7 +24,7 @@ type MainModel struct {
 
 	screenCurrent IScreen
 
-	service *memory.Service
+	service service.IService
 
 	// Глобальные данные, которые используются на всех окнах приложения.
 
@@ -32,12 +32,10 @@ type MainModel struct {
 	buildVersion string
 	buildDate    string
 	buildCommit  string
-
-	pendingCmd tea.Cmd // отложенная команда
 }
 
 // NewMainModel создаёт новый экземпляр *MainModel.
-func NewMainModel(serv *memory.Service) *MainModel {
+func NewMainModel(serv service.IService) *MainModel {
 	mod := &MainModel{
 		appName:           "N/A",
 		buildVersion:      "N/A",
@@ -53,7 +51,6 @@ func NewMainModel(serv *memory.Service) *MainModel {
 		screenPassEdit:    nil,
 		screenLoading:     nil,
 		service:           serv,
-		pendingCmd:        nil,
 	}
 
 	mod.screenStart = NewStartScreen(mod)
@@ -93,15 +90,8 @@ func (m *MainModel) Init() tea.Cmd { return nil }
 //
 //nolint:ireturn // Bubble Tea требует возвращать tea.Model по интерфейсу
 func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if m.pendingCmd != nil {
-		cmd := m.pendingCmd
-		m.pendingCmd = nil
-
-		return m, cmd
-	}
-
 	if m.screenCurrent != nil {
-		return m.screenCurrent.Action(msg)
+		return m.screenCurrent.Update(msg)
 	}
 
 	return m, nil
@@ -109,18 +99,30 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View формирует вывод информации в консоль.
 func (m *MainModel) View() string {
-	view := m.header()
+	view := m.viewHeader()
 
 	if m.screenCurrent != nil {
 		view += m.screenCurrent.String()
 	}
 
-	view += "\n" + m.footer() + "\n"
+	view += "\n" + m.viewFooter() + "\n"
 
 	return view
 }
 
-func (m *MainModel) header() string {
+// ExitToStartScreen отркрывает стартовый экран и удаляет авторизацию пользователя.
+func (m *MainModel) ExitToStartScreen(ctx context.Context) (*MainModel, tea.Cmd) {
+	m.SetCurrentScreen(m.screenStart)
+
+	err := m.service.Logout(ctx)
+	_ = err
+
+	m.currentUser = nil
+
+	return m, nil
+}
+
+func (m *MainModel) viewHeader() string {
 	parts := []string{
 		addLine(),
 	}
@@ -148,7 +150,7 @@ func (m *MainModel) header() string {
 	return strings.Join(parts, "\n")
 }
 
-func (m *MainModel) footer() string {
+func (m *MainModel) viewFooter() string {
 	return strings.Join([]string{
 		addLine(),
 		"[Build] Version: " + m.buildVersion + ", Date: " + m.buildDate + ".",
@@ -168,16 +170,4 @@ func addLine() string {
 	}
 
 	return string(b)
-}
-
-// ExitToStartScreen отркрывает стартовый экран и удаляет авторизацию пользователя.
-func (m *MainModel) ExitToStartScreen(ctx context.Context) (*MainModel, tea.Cmd) {
-	m.SetCurrentScreen(m.screenStart)
-
-	err := m.service.Logout(ctx)
-	_ = err
-
-	m.currentUser = nil
-
-	return m, nil
 }
