@@ -14,14 +14,15 @@ import (
 // Handler содержит общие данные для всех хендлеров.
 type Handler struct {
 	Log  logger.Logger
-	Stor storage.IStorage
+	Stor storage.IUserStorage
+	// MainStor
 }
 
 // NewHandler создаёт и инициализирует новый экзепляр *Handler.
 //
 // Параметры:
 //   - log: логгер.
-func NewHandler(stor storage.IStorage, log logger.Logger) *Handler {
+func NewHandler(stor storage.IUserStorage, log logger.Logger) *Handler {
 	return &Handler{
 		Log:  log,
 		Stor: stor,

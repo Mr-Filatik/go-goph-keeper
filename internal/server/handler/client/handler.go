@@ -49,13 +49,6 @@ func NewHandler(hand handler.Handler, opts ...HandlerOption) *Handler {
 
 var errUnsupportedOS = errors.New("unsupported OS")
 
-// InfoResp описывает ответ для запроса информации о доступных клиентах.
-type InfoResp struct {
-	Path    string   `json:"path"`
-	Example string   `json:"example"`
-	OS      []string `json:"os"`
-}
-
 // ClientInfo отдаёт информацию о поддержимаемых OS.
 func (h *Handler) ClientInfo(writer http.ResponseWriter, _ *http.Request) {
 	resp := InfoResp{

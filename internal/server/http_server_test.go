@@ -20,7 +20,7 @@ func TestNewHTTPServer(t *testing.T) {
 		Address:   "127.0.0.1:0",
 		Encryptor: nil,
 	}
-	serv := server.NewHTTPServer(conf, nil, mockLogger)
+	serv := server.NewHTTPServer(conf, nil, nil, mockLogger)
 
 	assert.NotEmpty(t, serv)
 }
@@ -34,7 +34,7 @@ func TestHTTPServer_Start(t *testing.T) {
 		Address:   "127.0.0.1:0",
 		Encryptor: nil,
 	}
-	serv := server.NewHTTPServer(conf, nil, mockLogger)
+	serv := server.NewHTTPServer(conf, nil, nil, mockLogger)
 
 	ctx := context.Background()
 	err := serv.Start(ctx)
@@ -51,7 +51,7 @@ func TestHTTPServer_Shutdown(t *testing.T) {
 		Address:   "127.0.0.1:0",
 		Encryptor: nil,
 	}
-	serv := server.NewHTTPServer(conf, nil, mockLogger)
+	serv := server.NewHTTPServer(conf, nil, nil, mockLogger)
 
 	ctx := context.Background()
 	err := serv.Start(ctx)
@@ -72,7 +72,7 @@ func TestHTTPServer_Close(t *testing.T) {
 		Address:   "127.0.0.1:0",
 		Encryptor: nil,
 	}
-	serv := server.NewHTTPServer(conf, nil, mockLogger)
+	serv := server.NewHTTPServer(conf, nil, nil, mockLogger)
 
 	ctx := context.Background()
 	err := serv.Start(ctx)
