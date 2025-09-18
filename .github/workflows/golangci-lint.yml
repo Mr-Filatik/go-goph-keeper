@@ -25,10 +25,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
-
-      - name: Clear golangci-lint cache
-        run: golangci-lint cache clean
-
+          
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
