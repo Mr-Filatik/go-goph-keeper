@@ -218,7 +218,9 @@ func (r *Repeater[Tin, Tout]) attemptAndMaybeFinish(
 	data Tin,
 	doneCh chan<- DoneEvent[Tout],
 ) (bool, error) {
-	result, err := r.runAttempt(ctx, data)
+	var result Tout
+
+	err := r.runAttempt(ctx, data, &result)
 	if r.condition(err) {
 		doneCh <- DoneEvent[Tout]{Result: result, Err: err}
 
@@ -240,6 +242,7 @@ func notifyRetry(ch chan<- RetryEvent, attempt int, err error, wait time.Duratio
 func waitOrCancel(ctx context.Context, d time.Duration) error {
 	timer := time.NewTimer(d)
 	defer timer.Stop()
+
 	select {
 	case <-ctx.Done():
 		return fmt.Errorf("cancel: %w", ctx.Err())
@@ -249,9 +252,7 @@ func waitOrCancel(ctx context.Context, d time.Duration) error {
 }
 
 // runAttempt запускает одну попытку с учётом DurationLimit и общего бюджета.
-//
-//nolint:ireturn // Repeater является универсальным и требует возвращать Tout по интерфейсу
-func (r *Repeater[Tin, Tout]) runAttempt(parent context.Context, data Tin) (Tout, error) {
+func (r *Repeater[Tin, Tout]) runAttempt(parent context.Context, data Tin, out *Tout) error {
 	var (
 		ctx      = parent
 		cancelFn context.CancelFunc
@@ -262,16 +263,19 @@ func (r *Repeater[Tin, Tout]) runAttempt(parent context.Context, data Tin) (Tout
 
 		per := minDur(r.DurationLimit, rem)
 		if per <= 0 {
-			var zero Tout
-
-			return zero, context.DeadlineExceeded
+			return context.DeadlineExceeded
 		}
 
 		ctx, cancelFn = context.WithTimeout(parent, per)
 		defer cancelFn()
 	}
 
-	return r.action(ctx, data)
+	val, err := r.action(ctx, data)
+	if err == nil && out != nil {
+		*out = val
+	}
+
+	return err
 }
 
 func remainingUntil(ctx context.Context) time.Duration {
