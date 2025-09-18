@@ -88,7 +88,7 @@ func (m *MainModel) Init() tea.Cmd { return nil }
 
 // Update реагирует на любые действия пользователя и изменения.
 //
-//nolint:ireturn // Bubble Tea требует возвращать tea.Model по интерфейсу
+//nolint:ireturn
 func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.screenCurrent != nil {
 		return m.screenCurrent.Update(msg)
