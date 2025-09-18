@@ -1,3 +1,6 @@
+// Package memory содержит реализацию для логики клиента.
+//
+//nolint:err113
 package memory
 
 import (
@@ -18,6 +21,8 @@ type Service struct {
 }
 
 // NewService создаёт новый экземпляр *Service.
+//
+//nolint:exhaustruct
 func NewService(l logger.Logger) *Service {
 	client := &Service{
 		log:   l,
@@ -71,46 +76,22 @@ func NewService(l logger.Logger) *Service {
 				Password:    "tg_pass_789",
 				Type:        service.PasswordTypeLogin,
 			},
-			{
-				ID:          "7",
-				Title:       "WorkMail",
-				Description: "Корпоративная почта",
-				Login:       "user@company.com",
-				Password:    "C0rpPass!",
-				Type:        service.PasswordTypeLogin,
-			},
-			{
-				ID:          "8",
-				Title:       "VPN",
-				Description: "Доступ в корпоративную сеть",
-				Login:       "vpnuser",
-				Password:    "vpn-strong-key",
-				Type:        service.PasswordTypeLogin,
-			},
-			{
-				ID:          "9",
-				Title:       "Facebook",
-				Description: "Личный аккаунт",
-				Login:       "fb.demo",
-				Password:    "fb!secure456",
-				Type:        service.PasswordTypeLogin,
-			},
-			{
-				ID:          "10",
-				Title:       "DockerHub",
-				Description: "Образы контейнеров",
-				Login:       "dockuser",
-				Password:    "d0ckerHUB!",
-				Type:        service.PasswordTypeLogin,
-			},
 		},
 	}
 
 	return client
 }
 
+const (
+	defaultLogin    = "demo"
+	defaultPassword = "demo"
+
+	defaultDuration = 1 * time.Second
+)
+
+// Login производит авторизацию пользователя.
 func (s *Service) Login(ctx context.Context, login, password string) error {
-	timer := time.NewTimer(1 * time.Second)
+	timer := time.NewTimer(defaultDuration)
 	defer timer.Stop()
 
 	select {
@@ -118,7 +99,7 @@ func (s *Service) Login(ctx context.Context, login, password string) error {
 		return context.Canceled
 
 	case <-timer.C:
-		if login != "demo" || password != "demo" {
+		if login != defaultLogin || password != defaultPassword {
 			return fmt.Errorf("invalid credentials: %w", errors.New("login or password"))
 		}
 
@@ -128,8 +109,9 @@ func (s *Service) Login(ctx context.Context, login, password string) error {
 	}
 }
 
+// Register производит регистрацию пользователя.
 func (s *Service) Register(ctx context.Context, login, password string) error {
-	timer := time.NewTimer(2 * time.Second)
+	timer := time.NewTimer(defaultDuration)
 	defer timer.Stop()
 
 	select {
@@ -137,7 +119,7 @@ func (s *Service) Register(ctx context.Context, login, password string) error {
 		return context.Canceled
 
 	case <-timer.C:
-		if login != "demo" || password != "demo" {
+		if login != defaultLogin || password != defaultPassword {
 			return fmt.Errorf("user already register: %w", errors.New("login  found"))
 		}
 
@@ -147,8 +129,9 @@ func (s *Service) Register(ctx context.Context, login, password string) error {
 	}
 }
 
+// Logout удаляет авторизацию пользователя.
 func (s *Service) Logout(ctx context.Context) error {
-	timer := time.NewTimer(1 * time.Second)
+	timer := time.NewTimer(defaultDuration)
 	defer timer.Stop()
 
 	select {
@@ -166,13 +149,14 @@ func (s *Service) Logout(ctx context.Context) error {
 	}
 }
 
+// GetPasswords получает все записи пользователя.
 func (s *Service) GetPasswords(ctx context.Context) ([]service.Password, error) {
-	timer := time.NewTimer(500 * time.Millisecond)
+	timer := time.NewTimer(defaultDuration)
 	defer timer.Stop()
 
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return nil, fmt.Errorf("get passwords: %w", ctx.Err())
 
 	case <-timer.C:
 		// Вернём фейковые данные
@@ -180,65 +164,69 @@ func (s *Service) GetPasswords(ctx context.Context) ([]service.Password, error) 
 	}
 }
 
+// GetPassword получает секретную информацию для конкретного пароля.
 func (s *Service) GetPassword(ctx context.Context, passID string) (string, error) {
-	timer := time.NewTimer(300 * time.Millisecond)
+	timer := time.NewTimer(defaultDuration)
 	defer timer.Stop()
 
 	select {
 	case <-ctx.Done():
-		return "", ctx.Err()
+		return "", fmt.Errorf("get password: %w", ctx.Err())
 	case <-timer.C:
 		if passID == "" {
-			return "", fmt.Errorf("password ID is empty")
+			return "", errors.New("password ID is empty")
 		}
 		// Заглушка: возвращаем «секрет»
 		return "secret-password-for-" + passID, nil
 	}
 }
 
+// AddPassword создаёт новый пароль.
 func (s *Service) AddPassword(ctx context.Context, pass service.Password) (string, error) {
-	timer := time.NewTimer(700 * time.Millisecond)
+	timer := time.NewTimer(defaultDuration)
 	defer timer.Stop()
 
 	select {
 	case <-ctx.Done():
-		return "", ctx.Err()
+		return "", fmt.Errorf("add password: %w", ctx.Err())
 	case <-timer.C:
 		if pass.Title == "" {
-			return "", fmt.Errorf("title is required")
+			return "", errors.New("title is required")
 		}
 		// Фейковый ID
 		return "new-id-123", nil
 	}
 }
 
+// ChangePassword изменяет текущий пароль.
 func (s *Service) ChangePassword(ctx context.Context, pass service.Password) error {
-	timer := time.NewTimer(400 * time.Millisecond)
+	timer := time.NewTimer(defaultDuration)
 	defer timer.Stop()
 
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		return fmt.Errorf("change password: %w", ctx.Err())
 	case <-timer.C:
 		if pass.ID == "" {
-			return fmt.Errorf("password ID is required")
+			return errors.New("password ID is required")
 		}
 		// Заглушка: просто успех
 		return nil
 	}
 }
 
+// RemovePassword удаляет текущий пароль.
 func (s *Service) RemovePassword(ctx context.Context, passID string) error {
-	timer := time.NewTimer(300 * time.Millisecond)
+	timer := time.NewTimer(defaultDuration)
 	defer timer.Stop()
 
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		return fmt.Errorf("remove password: %w", ctx.Err())
 
 	case <-timer.C:
 		if passID == "2" {
-			return fmt.Errorf("password ID is required")
+			return errors.New("password ID is required")
 		}
 
 		return nil

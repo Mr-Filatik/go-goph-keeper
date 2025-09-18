@@ -86,7 +86,9 @@ func New[Tin any, Tout any]() *Repeater[Tin, Tout] {
 //
 // Параметры:
 //   - f: функция
-func (r *Repeater[Tin, Tout]) SetFunc(f func(context.Context, Tin) (Tout, error)) *Repeater[Tin, Tout] {
+func (r *Repeater[Tin, Tout]) SetFunc(
+	f func(context.Context, Tin) (Tout, error),
+) *Repeater[Tin, Tout] {
 	r.action = f
 
 	return r
@@ -130,7 +132,10 @@ func (r *Repeater[Tin, Tout]) SetDurationLimit(dLim, dLimAll time.Duration) *Rep
 //
 // Параметры:
 //   - data: данные
-func (r *Repeater[Tin, Tout]) Run(parent context.Context, data Tin) (<-chan DoneEvent[Tout], <-chan RetryEvent) {
+func (r *Repeater[Tin, Tout]) Run(
+	parent context.Context,
+	data Tin,
+) (<-chan DoneEvent[Tout], <-chan RetryEvent) {
 	retryCh := make(chan RetryEvent, len(r.delays))
 	doneCh := make(chan DoneEvent[Tout], 1)
 
@@ -245,7 +250,7 @@ func waitOrCancel(ctx context.Context, d time.Duration) error {
 
 // runAttempt запускает одну попытку с учётом DurationLimit и общего бюджета.
 //
-//nolint:ireturn // возвращаем тип-параметр Tout по контракту *Repeater[Tin, Tout]
+//nolint:ireturn // Repeater является универсальным и требует возвращать Tout по интерфейсу
 func (r *Repeater[Tin, Tout]) runAttempt(parent context.Context, data Tin) (Tout, error) {
 	var (
 		ctx      = parent

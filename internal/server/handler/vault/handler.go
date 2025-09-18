@@ -68,14 +68,16 @@ func (h *Handler) UpsertItem(resp http.ResponseWriter, req *http.Request) {
 	}
 
 	item := &entity.VaultItem{
-		ID:        upReq.ID,
-		OwnerID:   uid,
-		Type:      upReq.Type,
-		Title:     upReq.Title,
-		Meta:      upReq.Meta,
-		Data:      upReq.Data,
-		Version:   upReq.Version,
-		UpdatedAt: time.Now().UTC(),
+		ID:          upReq.ID,
+		OwnerID:     uid,
+		Type:        upReq.Type,
+		Title:       upReq.Title,
+		Meta:        upReq.Meta,
+		Data:        upReq.Data,
+		Version:     upReq.Version,
+		UpdatedAt:   time.Now().UTC(),
+		Description: "",
+		Username:    "",
 	}
 
 	upsertID, err := h.VStor.UpsertItem(req.Context(), item)

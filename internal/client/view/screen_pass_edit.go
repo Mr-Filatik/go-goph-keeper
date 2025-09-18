@@ -1,6 +1,4 @@
 // Package view содержит логику для работы с пользовательским интерфейсом.
-//
-// nolint
 package view
 
 import (
@@ -49,42 +47,12 @@ func NewPasswordEditScreen(mod *MainModel) *PasswordEditScreen {
 		input:       input,
 		step:        stepInit,
 		stepMax:     1,
+		editMode:    false,
+		editField:   "",
 	}
 	screen.rebuildMenu()
 
 	return screen
-}
-
-// rebuildMenu перестраивает список пунктов в зависимости от IsCreate и типа записи.
-func (s *PasswordEditScreen) rebuildMenu() {
-	if s.IsCreate {
-		s.Items = []string{
-			"Title",
-			"Description",
-			"Type",
-			"Login",
-			"Password",
-			"Create",
-			"Back to list",
-		}
-	} else {
-		s.Items = []string{
-			"Title",
-			"Description",
-			"Type",
-			"Login",
-			"Password",
-			"Save",
-			"Remove",
-			"Back to details",
-		}
-	}
-	if s.Index < 0 {
-		s.Index = 0
-	}
-	if s.Index >= len(s.Items) {
-		s.Index = len(s.Items) - 1
-	}
 }
 
 // ValidateScreenData проверяет и корректирует данные для текущего экрана.
@@ -93,6 +61,8 @@ func (s *PasswordEditScreen) ValidateScreenData() {
 }
 
 // String выводит окно и его содержимое в виде строки.
+//
+//nolint:cyclop
 func (s *PasswordEditScreen) String() string {
 	view := "\n[Password Edit] "
 
@@ -122,15 +92,17 @@ func (s *PasswordEditScreen) String() string {
 
 	view += "\n[Edit] Select field/action:\n"
 
-	for i := range s.Items {
+	for index := range s.Items {
 		cursor := " "
-		if i == s.Index {
+		if index == s.Index {
 			cursor = ">"
 		}
-		line := s.Items[i]
+
+		line := s.Items[index]
 		if s.editMode && line == s.editField {
 			line += " [editing]"
 		}
+
 		view += fmt.Sprintf("%s %s\n", cursor, line)
 	}
 
@@ -166,6 +138,8 @@ func (s *PasswordEditScreen) GetHints() []Hint {
 }
 
 // Update описывает логику работы с командами для текущего окна.
+//
+//nolint:cyclop
 func (s *PasswordEditScreen) Update(msg tea.Msg) (*MainModel, tea.Cmd) {
 	// Режим редактирования: отдаём события в textinput
 	if s.editMode {
@@ -200,21 +174,27 @@ func (s *PasswordEditScreen) Update(msg tea.Msg) (*MainModel, tea.Cmd) {
 				// Назад в список
 				screen := s.mainModel.screenPassList
 				s.mainModel.SetCurrentScreen(screen)
+
 				return s.mainModel, nil
 			}
+
 			s.actionBackToDetails()
+
 			return s.mainModel, nil
 
 		case KeyUp:
 			s.Index = indexPrev(s.Index)
+
 			return s.mainModel, nil
 
 		case KeyDown:
 			s.Index = indexNext(s.Index, len(s.Items))
+
 			return s.mainModel, nil
 
 		case KeyTab:
 			s.Index = indexSwitch(s.Index, len(s.Items))
+
 			return s.mainModel, nil
 
 		case KeyEnter:
@@ -225,7 +205,43 @@ func (s *PasswordEditScreen) Update(msg tea.Msg) (*MainModel, tea.Cmd) {
 	return s.mainModel, nil
 }
 
+// rebuildMenu перестраивает список пунктов в зависимости от IsCreate и типа записи.
+func (s *PasswordEditScreen) rebuildMenu() {
+	if s.IsCreate {
+		s.Items = []string{
+			"Title",
+			"Description",
+			"Type",
+			"Login",
+			"Password",
+			"Create",
+			"Back to list",
+		}
+	} else {
+		s.Items = []string{
+			"Title",
+			"Description",
+			"Type",
+			"Login",
+			"Password",
+			"Save",
+			"Remove",
+			"Back to details",
+		}
+	}
+
+	if s.Index < 0 {
+		s.Index = 0
+	}
+
+	if s.Index >= len(s.Items) {
+		s.Index = len(s.Items) - 1
+	}
+}
+
 // enter — обработка выбранного пункта меню (в обычном режиме).
+//
+//nolint:cyclop
 func (s *PasswordEditScreen) enter() tea.Cmd {
 	if s.Item == nil {
 		return nil
@@ -233,43 +249,45 @@ func (s *PasswordEditScreen) enter() tea.Cmd {
 
 	choice := s.Items[s.Index]
 	switch choice {
+	//nolint:goconst
 	case "Title", "Description", "Login", "Password":
 		// Для типа != login логин/пароль пропустим
 		if (choice == "Login" || choice == "Password") && s.Item.Type != service.PasswordTypeLogin {
 			s.InfoMessage = "field not available for current type"
+
 			return nil
 		}
+
 		s.startEdit(choice)
 
 		return nil
 
 	case "Type":
 		s.cycleType()
+
 		return nil
 
-	case "Create":
-		if !s.IsCreate {
-			return nil
-		}
-		return s.createItem()
-
-	case "Save":
+	case "Create", "Save":
 		if s.IsCreate {
-			return nil
+			return s.createItem()
 		}
+
 		return s.saveItem()
 
 	case "Remove":
 		if s.IsCreate {
 			return nil
 		}
+
 		// В прототипе не нужно опустим
 		s.InfoMessage = "remove not implemented"
+
 		return nil
 
 	case "Back to list":
 		screen := s.mainModel.screenPassList
 		s.mainModel.SetCurrentScreen(screen)
+
 		return nil
 
 	case "Back to details":
@@ -279,6 +297,7 @@ func (s *PasswordEditScreen) enter() tea.Cmd {
 		} else {
 			s.actionBackToDetails()
 		}
+
 		return nil
 	}
 
@@ -303,12 +322,14 @@ func (s *PasswordEditScreen) startEdit(field string) {
 		s.input.EchoMode = textinput.EchoPassword
 		s.input.EchoCharacter = '•'
 	}
+
 	s.input.Focus()
 }
 
 // applyEdit применяет введённый текст к выбранному полю.
 func (s *PasswordEditScreen) applyEdit() {
 	val := s.input.Value()
+
 	switch s.editField {
 	case "Title":
 		s.Item.Title = val
@@ -319,6 +340,7 @@ func (s *PasswordEditScreen) applyEdit() {
 	case "Password":
 		s.Item.Password = val
 	}
+
 	s.InfoMessage = s.editField + " updated"
 	// вернуть обычный режим ввода
 	s.input.Blur()
@@ -341,19 +363,23 @@ func (s *PasswordEditScreen) cycleType() {
 // createItem вызывает AddPassword при IsCreate=true.
 func (s *PasswordEditScreen) createItem() tea.Cmd {
 	item := *s.Item // копия
+
 	return func() tea.Msg {
 		ctx, cancelFn := context.WithCancel(context.Background())
 		defer cancelFn()
 
-		id, err := s.mainModel.service.AddPassword(ctx, item)
+		newID, err := s.mainModel.service.AddPassword(ctx, item)
 		if err != nil {
 			s.InfoMessage = "create error: " + err.Error()
+
 			return nil
 		}
-		s.InfoMessage = "created with ID: " + id
+
+		s.InfoMessage = "created with ID: " + newID
 		// после создания — в список
 		screen := s.mainModel.screenPassList
 		s.mainModel.SetCurrentScreen(screen)
+
 		return nil
 	}
 }
@@ -361,17 +387,21 @@ func (s *PasswordEditScreen) createItem() tea.Cmd {
 // saveItem вызывает ChangePassword при редактировании существующей записи.
 func (s *PasswordEditScreen) saveItem() tea.Cmd {
 	item := *s.Item // копия
+
 	return func() tea.Msg {
 		ctx, cancelFn := context.WithCancel(context.Background())
 		defer cancelFn()
 
 		if err := s.mainModel.service.ChangePassword(ctx, item); err != nil {
 			s.InfoMessage = "save error: " + err.Error()
+
 			return nil
 		}
+
 		s.InfoMessage = "saved"
 		// назад в детали
 		s.actionBackToDetails()
+
 		return nil
 	}
 }
@@ -386,5 +416,6 @@ func safeType(t service.ItemType) service.ItemType {
 	if t == "" {
 		return service.PasswordTypeLogin
 	}
+
 	return t
 }

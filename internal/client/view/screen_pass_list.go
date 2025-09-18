@@ -4,6 +4,7 @@ package view
 import (
 	"context"
 	"fmt"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mr-filatik/go-goph-keeper/internal/client/service"
@@ -111,6 +112,10 @@ func (s *PasswordListScreen) Update(msg tea.Msg) (*MainModel, tea.Cmd) {
 					Description: "",
 					Login:       "",
 					Password:    "",
+					Type:        service.PasswordTypeLogin,
+					Meta:        nil,
+					Version:     0,
+					UpdatedAt:   time.Now(),
 				}
 
 				s.mainModel.SetCurrentScreen(screen)

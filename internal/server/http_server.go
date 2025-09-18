@@ -157,7 +157,10 @@ func (s *HTTPServer) registerRoutes() {
 	routers.Get("/vault/items", middleware.RequireAuth(s.encryptor, vaultHandler.ListItems))
 	routers.Get("/vault/items/{id}", middleware.RequireAuth(s.encryptor, vaultHandler.GetItem))
 	routers.Post("/vault/items", middleware.RequireAuth(s.encryptor, vaultHandler.UpsertItem))
-	routers.Delete("/vault/items/{id}", middleware.RequireAuth(s.encryptor, vaultHandler.DeleteItem))
+	routers.Delete(
+		"/vault/items/{id}",
+		middleware.RequireAuth(s.encryptor, vaultHandler.DeleteItem),
+	)
 	routers.Get("/vault/sync", middleware.RequireAuth(s.encryptor, vaultHandler.SyncSince))
 
 	s.server.Handler = routers

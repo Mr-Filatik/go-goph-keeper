@@ -7,16 +7,16 @@ import "time"
 type ItemType string
 
 const (
-	// ItemLogin - пара логин/пароль.
+	// PasswordTypeLogin - пара логин/пароль.
 	PasswordTypeLogin ItemType = "login"
 
-	// ItemText - произвольный текст.
+	// PasswordTypeText - произвольный текст.
 	PasswordTypeText ItemType = "text"
 
-	// ItemBinary - произвольный бинарь.
+	// PasswordTypeBinary - произвольный бинарь.
 	PasswordTypeBinary ItemType = "binary"
 
-	// ItemCard - данные банковских карт.
+	// PasswordTypeCard - данные банковских карт.
 	PasswordTypeCard ItemType = "card"
 )
 

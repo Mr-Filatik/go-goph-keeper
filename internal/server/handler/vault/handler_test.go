@@ -76,21 +76,27 @@ type mockStorage struct {
 func (m *mockStorage) CreateItem(ctx context.Context, it *entity.VaultItem) (string, error) {
 	return m.CreateItemFn(ctx, it)
 }
+
 func (m *mockStorage) UpdateItem(ctx context.Context, it *entity.VaultItem) error {
 	return m.UpdateItemFn(ctx, it)
 }
+
 func (m *mockStorage) UpsertItem(ctx context.Context, it *entity.VaultItem) (string, error) {
 	return m.UpsertItemFn(ctx, it)
 }
+
 func (m *mockStorage) GetItem(ctx context.Context, ownerID, id string) (*entity.VaultItem, error) {
 	return m.GetItemFn(ctx, ownerID, id)
 }
+
 func (m *mockStorage) ListItems(ctx context.Context, ownerID string) ([]*entity.VaultItem, error) {
 	return m.ListItemsFn(ctx, ownerID)
 }
+
 func (m *mockStorage) DeleteItem(ctx context.Context, ownerID, id string) error {
 	return m.DeleteItemFn(ctx, ownerID, id)
 }
+
 func (m *mockStorage) ListChangedSince(
 	ctx context.Context,
 	ownerID string,
@@ -265,7 +271,8 @@ func TestVault_UpsertItem_BadRequest(t *testing.T) {
 		},
 	})
 
-	req := httptest.NewRequest(http.MethodPost, "/vault/items", bytes.NewBufferString("{")) // битый JSON
+	// битый JSON
+	req := httptest.NewRequest(http.MethodPost, "/vault/items", bytes.NewBufferString("{"))
 	req.Header.Set("Content-Type", "application/json")
 	req = withUser(req)
 
