@@ -69,7 +69,7 @@ func Run() {
 		Encryptor: encr,
 	}
 
-	server = NewHTTPServer(httpConfig, stor, log)
+	server = NewHTTPServer(httpConfig, stor, stor, log)
 
 	startErr := server.Start(exitCtx)
 	if startErr != nil {

@@ -9,6 +9,8 @@ import (
 
 	"github.com/mr-filatik/go-goph-keeper/internal/client/client/http/resty"
 	"github.com/mr-filatik/go-goph-keeper/internal/client/config"
+	"github.com/mr-filatik/go-goph-keeper/internal/client/service/memory"
+	"github.com/mr-filatik/go-goph-keeper/internal/client/view"
 	"github.com/mr-filatik/go-goph-keeper/internal/common"
 	"github.com/mr-filatik/go-goph-keeper/internal/common/logger"
 )
@@ -61,11 +63,22 @@ func Run() {
 		ServerAddress: appConfig.ServerAddress,
 	}
 
+	// Add client.
 	mainClient := resty.NewClient(clientConfig, log)
 
 	startErr := mainClient.Start(exitCtx)
 	if startErr != nil {
 		log.Error("Client starting error", startErr)
+	}
+
+	// Add service with main application logic.
+	mainService := memory.NewService(log)
+
+	model := view.NewMainModel(mainService)
+
+	modelErr := model.Start()
+	if modelErr != nil {
+		log.Error("View starting error", modelErr)
 	}
 
 	// Ожидание сигнала остановки

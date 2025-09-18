@@ -16,6 +16,8 @@ import (
 	"github.com/mr-filatik/go-goph-keeper/internal/server/handler"
 	"github.com/mr-filatik/go-goph-keeper/internal/server/handler/auth"
 	"github.com/mr-filatik/go-goph-keeper/internal/server/handler/client"
+	"github.com/mr-filatik/go-goph-keeper/internal/server/handler/vault"
+	"github.com/mr-filatik/go-goph-keeper/internal/server/middleware"
 	"github.com/mr-filatik/go-goph-keeper/internal/server/storage"
 )
 
@@ -31,7 +33,8 @@ type HTTPServer struct {
 	server    *http.Server // сервер
 	encryptor *jwt.Encryptor
 	log       logger.Logger // логгер
-	stor      storage.IStorage
+	stor      storage.IUserStorage
+	vStor     storage.IStorage
 	address   string // адрес сервера
 }
 
@@ -46,7 +49,12 @@ type HTTPServerConfig struct {
 // Параметры:
 //   - conf: конфиг сервера;
 //   - log: логгер.
-func NewHTTPServer(conf *HTTPServerConfig, stor storage.IStorage, log logger.Logger) *HTTPServer {
+func NewHTTPServer(
+	conf *HTTPServerConfig,
+	stor storage.IUserStorage,
+	vStor storage.IStorage,
+	log logger.Logger,
+) *HTTPServer {
 	log.Info("HTTPServer creating...")
 
 	srv := &HTTPServer{
@@ -54,6 +62,7 @@ func NewHTTPServer(conf *HTTPServerConfig, stor storage.IStorage, log logger.Log
 		encryptor: conf.Encryptor,
 		address:   conf.Address,
 		stor:      stor,
+		vStor:     vStor,
 		log:       log,
 	}
 
@@ -143,6 +152,16 @@ func (s *HTTPServer) registerRoutes() {
 	clientHandler := client.NewHandler(*mainHandler)
 	routers.HandleFunc("/client", clientHandler.ClientInfo)
 	routers.HandleFunc("/client/{os}", clientHandler.ClientDownload)
+
+	vaultHandler := vault.NewHandler(*mainHandler, s.vStor)
+	routers.Get("/vault/items", middleware.RequireAuth(s.encryptor, vaultHandler.ListItems))
+	routers.Get("/vault/items/{id}", middleware.RequireAuth(s.encryptor, vaultHandler.GetItem))
+	routers.Post("/vault/items", middleware.RequireAuth(s.encryptor, vaultHandler.UpsertItem))
+	routers.Delete(
+		"/vault/items/{id}",
+		middleware.RequireAuth(s.encryptor, vaultHandler.DeleteItem),
+	)
+	routers.Get("/vault/sync", middleware.RequireAuth(s.encryptor, vaultHandler.SyncSince))
 
 	s.server.Handler = routers
 }
