@@ -57,7 +57,7 @@ linters:
     - ineffassign
     - interfacebloat
     - intrange
-    # - ireturn # убрал, т.к. линтер забаговал
+    - ireturn
     - lll
     - loggercheck
     - maintidx
