@@ -14,6 +14,7 @@ import (
 type Service struct {
 	log   logger.Logger
 	token string
+	pass  []service.Password
 }
 
 // NewService создаёт новый экземпляр *Service.
@@ -21,6 +22,88 @@ func NewService(l logger.Logger) *Service {
 	client := &Service{
 		log:   l,
 		token: "",
+		pass: []service.Password{
+			{
+				ID:          "1",
+				Title:       "Email",
+				Description: "Личная почта Gmail",
+				Login:       "demo@gmail.com",
+				Password:    "p@ssw0rd123",
+				Type:        service.PasswordTypeLogin,
+			},
+			{
+				ID:          "2",
+				Title:       "GitHub",
+				Description: "Аккаунт разработчика",
+				Login:       "devuser",
+				Password:    "gh_token_abc123",
+				Type:        service.PasswordTypeLogin,
+			},
+			{
+				ID:          "3",
+				Title:       "Bank",
+				Description: "Интернет-банк",
+				Login:       "client1234",
+				Password:    "B@nkSecure!",
+				Type:        service.PasswordTypeLogin,
+			},
+			{
+				ID:          "4",
+				Title:       "AWS",
+				Description: "Amazon Web Services root",
+				Login:       "root@company.com",
+				Password:    "aws-secret-key",
+				Type:        service.PasswordTypeLogin,
+			},
+			{
+				ID:          "5",
+				Title:       "Spotify",
+				Description: "Музыка",
+				Login:       "musiclover",
+				Password:    "spotify!234",
+				Type:        service.PasswordTypeLogin,
+			},
+			{
+				ID:          "6",
+				Title:       "Telegram",
+				Description: "Мессенджер",
+				Login:       "+1234567890",
+				Password:    "tg_pass_789",
+				Type:        service.PasswordTypeLogin,
+			},
+			{
+				ID:          "7",
+				Title:       "WorkMail",
+				Description: "Корпоративная почта",
+				Login:       "user@company.com",
+				Password:    "C0rpPass!",
+				Type:        service.PasswordTypeLogin,
+			},
+			{
+				ID:          "8",
+				Title:       "VPN",
+				Description: "Доступ в корпоративную сеть",
+				Login:       "vpnuser",
+				Password:    "vpn-strong-key",
+				Type:        service.PasswordTypeLogin,
+			},
+			{
+				ID:          "9",
+				Title:       "Facebook",
+				Description: "Личный аккаунт",
+				Login:       "fb.demo",
+				Password:    "fb!secure456",
+				Type:        service.PasswordTypeLogin,
+			},
+			{
+				ID:          "10",
+				Title:       "DockerHub",
+				Description: "Образы контейнеров",
+				Login:       "dockuser",
+				Password:    "d0ckerHUB!",
+				Type:        service.PasswordTypeLogin,
+			},
+		},
 	}
 
 	return client
@@ -93,88 +176,7 @@ func (s *Service) GetPasswords(ctx context.Context) ([]service.Password, error) 
 
 	case <-timer.C:
 		// Вернём фейковые данные
-		return []service.Password{
-			{
-				ID:          "1",
-				Title:       "Email",
-				Description: "Личная почта Gmail",
-				Login:       "demo@gmail.com",
-				Password:    "p@ssw0rd123",
-				Notes:       "Основной ящик для регистрации сервисов",
-			},
-			{
-				ID:          "2",
-				Title:       "GitHub",
-				Description: "Аккаунт разработчика",
-				Login:       "devuser",
-				Password:    "gh_token_abc123",
-				Notes:       "Используется для приватных репозиториев",
-			},
-			{
-				ID:          "3",
-				Title:       "Bank",
-				Description: "Интернет-банк",
-				Login:       "client1234",
-				Password:    "B@nkSecure!",
-				Notes:       "Требует SMS-подтверждение",
-			},
-			{
-				ID:          "4",
-				Title:       "AWS",
-				Description: "Amazon Web Services root",
-				Login:       "root@company.com",
-				Password:    "aws-secret-key",
-				Notes:       "Не хранить в продакшене!",
-			},
-			{
-				ID:          "5",
-				Title:       "Spotify",
-				Description: "Музыка",
-				Login:       "musiclover",
-				Password:    "spotify!234",
-				Notes:       "Подключена банковская карта",
-			},
-			{
-				ID:          "6",
-				Title:       "Telegram",
-				Description: "Мессенджер",
-				Login:       "+1234567890",
-				Password:    "tg_pass_789",
-				Notes:       "Используется 2FA",
-			},
-			{
-				ID:          "7",
-				Title:       "WorkMail",
-				Description: "Корпоративная почта",
-				Login:       "user@company.com",
-				Password:    "C0rpPass!",
-				Notes:       "Истекает каждые 90 дней",
-			},
-			{
-				ID:          "8",
-				Title:       "VPN",
-				Description: "Доступ в корпоративную сеть",
-				Login:       "vpnuser",
-				Password:    "vpn-strong-key",
-				Notes:       "OpenVPN конфиг в отдельном файле",
-			},
-			{
-				ID:          "9",
-				Title:       "Facebook",
-				Description: "Личный аккаунт",
-				Login:       "fb.demo",
-				Password:    "fb!secure456",
-				Notes:       "Привязан Instagram",
-			},
-			{
-				ID:          "10",
-				Title:       "DockerHub",
-				Description: "Образы контейнеров",
-				Login:       "dockuser",
-				Password:    "d0ckerHUB!",
-				Notes:       "Только для публичных репозиториев",
-			},
-		}, nil
+		return s.pass, nil
 	}
 }
 

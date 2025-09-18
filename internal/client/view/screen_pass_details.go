@@ -112,6 +112,11 @@ func (s *PasswordDetailsScreen) Update(msg tea.Msg) (*MainModel, tea.Cmd) {
 
 		return s.mainModel, nil
 
+	case KeyTab:
+		s.Index = indexSwitch(s.Index, len(s.Items))
+
+		return s.mainModel, nil
+
 	case KeyEnter:
 		s.enter()
 

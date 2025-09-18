@@ -22,3 +22,5 @@ const (
 	stepOne
 	stepTwo
 )
+
+const textOperationCanceled = "operation canceled"

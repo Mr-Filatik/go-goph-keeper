@@ -130,10 +130,10 @@ func (s *RegisterScreen) initAction(inctx context.Context, login, password strin
 
 	loadScreen := s.mainModel.screenLoading
 
-	loadScreen.title = "Login user"
-	loadScreen.desc = "Login user by email and password"
+	loadScreen.title = "Register user"
+	loadScreen.desc = "register user by email and password"
 	loadScreen.percent = 0
-	loadScreen.status = "Send request for login..."
+	loadScreen.status = "Send request for register..."
 	loadScreen.OnProgress = func(_ float64, _ string) tea.Cmd {
 		return s.actionCmd(ctx, login, password)
 	}
@@ -157,7 +157,7 @@ func (s *RegisterScreen) initAction(inctx context.Context, login, password strin
 	loadScreen.OnCancel = func() {
 		cancelFn()
 
-		prevScreen.ErrMessage = "operation canceled"
+		prevScreen.ErrMessage = textOperationCanceled
 
 		s.mainModel.SetCurrentScreen(prevScreen)
 	}

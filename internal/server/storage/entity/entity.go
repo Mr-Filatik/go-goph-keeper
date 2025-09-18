@@ -47,12 +47,14 @@ const (
 
 // VaultItem описывает тип для хранения информации.
 type VaultItem struct {
-	ID        string            `json:"id"`
-	OwnerID   string            `json:"-"` // владелец (userID)
-	Type      ItemType          `json:"type"`
-	Title     string            `json:"title"`
-	Meta      map[string]string `json:"meta"` // произвольная метаинфа
-	Data      []byte            `json:"data"` // шифротекст (opaque)
-	Version   int64             `json:"version"`
-	UpdatedAt time.Time         `json:"updatedAt"`
+	ID          string            `json:"id"`
+	OwnerID     string            `json:"-"` // владелец (userID)
+	Type        ItemType          `json:"type"`
+	Title       string            `json:"title"`
+	Description string            `json:"desc"`
+	Meta        map[string]string `json:"meta"` // произвольная метаинфа
+	Username    string            `json:"username"`
+	Data        string            `json:"data"` // шифротекст (opaque)
+	Version     int64             `json:"version"`
+	UpdatedAt   time.Time         `json:"updatedAt"`
 }

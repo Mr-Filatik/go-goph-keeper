@@ -8,6 +8,6 @@ type upsertReq struct {
 	Type    entity.ItemType   `json:"type"`
 	Title   string            `json:"title"`
 	Meta    map[string]string `json:"meta"`
-	Data    []byte            `json:"data"`
+	Data    string            `json:"data"`
 	Version int64             `json:"version"`
 }

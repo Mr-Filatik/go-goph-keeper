@@ -1,9 +1,13 @@
 // Package view содержит логику для работы с пользовательским интерфейсом.
+//
+// nolint
 package view
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/mr-filatik/go-goph-keeper/internal/client/service"
 )
@@ -15,12 +19,22 @@ type PasswordEditScreen struct {
 	Items       []string
 	Item        *service.Password
 	InfoMessage string
+	ErrMessage  string
 	IsCreate    bool
+	step        int // шаги для последовательных действий (1 - первое, 2 - второе)
+	stepMax     int // всего шагов в последовательности действий
+
+	editMode  bool            // false: выбор поля/кнопок; true: редактирование поля
+	editField string          // какое поле редактируем
+	input     textinput.Model // textinput для редактирования
 }
 
 // NewPasswordEditScreen создаёт новый экзепляр *PasswordEditScreen.
 func NewPasswordEditScreen(mod *MainModel) *PasswordEditScreen {
-	return &PasswordEditScreen{
+	input := textinput.New()
+	input.CharLimit = 256
+
+	screen := &PasswordEditScreen{
 		mainModel: mod,
 		Index:     0,
 		Items: []string{
@@ -30,62 +44,106 @@ func NewPasswordEditScreen(mod *MainModel) *PasswordEditScreen {
 		},
 		Item:        nil,
 		InfoMessage: "",
+		ErrMessage:  "",
 		IsCreate:    false,
+		input:       input,
+		step:        stepInit,
+		stepMax:     1,
+	}
+	screen.rebuildMenu()
+
+	return screen
+}
+
+// rebuildMenu перестраивает список пунктов в зависимости от IsCreate и типа записи.
+func (s *PasswordEditScreen) rebuildMenu() {
+	if s.IsCreate {
+		s.Items = []string{
+			"Title",
+			"Description",
+			"Type",
+			"Login",
+			"Password",
+			"Create",
+			"Back to list",
+		}
+	} else {
+		s.Items = []string{
+			"Title",
+			"Description",
+			"Type",
+			"Login",
+			"Password",
+			"Save",
+			"Remove",
+			"Back to details",
+		}
+	}
+	if s.Index < 0 {
+		s.Index = 0
+	}
+	if s.Index >= len(s.Items) {
+		s.Index = len(s.Items) - 1
 	}
 }
 
 // ValidateScreenData проверяет и корректирует данные для текущего экрана.
 func (s *PasswordEditScreen) ValidateScreenData() {
-	minLimit := 0
-	if s.Index < minLimit {
-		s.Index = minLimit
-	}
-
-	maxLimit := len(s.Items) - 1
-	if s.Index > maxLimit {
-		s.Index = maxLimit
-	}
-
-	if s.IsCreate {
-		s.Items = []string{
-			"Create",
-			"Back to details",
-		}
-	} else {
-		s.Items = []string{
-			"Back to details",
-			"Edit",
-			"Remove",
-		}
-	}
+	s.rebuildMenu()
 }
 
 // String выводит окно и его содержимое в виде строки.
 func (s *PasswordEditScreen) String() string {
-	view := "\n[Password Edit] Edit:\n"
+	view := "\n[Password Edit] "
+
+	if s.IsCreate {
+		view += "Create new item:\n"
+	} else {
+		view += "Edit item:\n"
+	}
 
 	if s.Item == nil {
 		view += "\nNo data...\n"
 	} else {
 		item := s.Item
-		view += fmt.Sprintf("Name: %s\nDecsription: %s\n", item.Title, item.Description)
-		view += fmt.Sprintf("Login: %s\n", item.Login)
-		view += "Password: [hidden] (press 'ctrl+c' to copy)\n"
+
+		view += fmt.Sprintf("Type: %s\n", safeType(item.Type))
+		view += fmt.Sprintf("Title: %s\n", item.Title)
+		view += fmt.Sprintf("Description: %s\n", item.Description)
+
+		// Поля Login/Password показываем для типа login
+		if item.Type == service.PasswordTypeLogin {
+			view += fmt.Sprintf("Login: %s\n", item.Login)
+			view += "Password: [hidden]\n"
+		} else {
+			view += "(no login/password for this type)\n"
+		}
 	}
 
-	view += "\n[Password Details] Select action:\n"
+	view += "\n[Edit] Select field/action:\n"
 
-	for index := range s.Items {
+	for i := range s.Items {
 		cursor := " "
-		if index == s.Index {
+		if i == s.Index {
 			cursor = ">"
 		}
+		line := s.Items[i]
+		if s.editMode && line == s.editField {
+			line += " [editing]"
+		}
+		view += fmt.Sprintf("%s %s\n", cursor, line)
+	}
 
-		view += fmt.Sprintf("%s %s\n", cursor, s.Items[index])
+	if s.editMode {
+		view += "\n[Input]: " + s.input.View() + "\n"
 	}
 
 	if s.InfoMessage != "" {
 		view += "\n[INFO]: " + s.InfoMessage + "\n"
+	}
+
+	if s.ErrMessage != "" {
+		view += "\n[ERROR]: " + s.ErrMessage + "\n"
 	}
 
 	return view
@@ -93,79 +151,240 @@ func (s *PasswordEditScreen) String() string {
 
 // GetHints выводит подсказки по управлению для текущего окна.
 func (s *PasswordEditScreen) GetHints() []Hint {
+	if s.editMode {
+		return []Hint{
+			{"Apply", []string{KeyEnter}},
+			{"Cancel", []string{KeyEscape}},
+		}
+	}
+
 	return []Hint{
 		{"Select", []string{KeyEnter}},
-		{"Switch", []string{KeyTab}},
-		{"Next", []string{KeyDown}},
-		{"Previous", []string{KeyUp}},
+		{"Switch", []string{KeyTab, KeyDown, KeyUp}},
 		{"Back", []string{KeyEscape}},
-		// ctrl+c = save
 	}
 }
 
 // Update описывает логику работы с командами для текущего окна.
 func (s *PasswordEditScreen) Update(msg tea.Msg) (*MainModel, tea.Cmd) {
-	if key, isKey := msg.(tea.KeyMsg); isKey {
+	// Режим редактирования: отдаём события в textinput
+	if s.editMode {
+		if key, ok := msg.(tea.KeyMsg); ok {
+			switch key.String() {
+			case KeyEscape:
+				// Выходим из редактирования без сохранения
+				s.editMode = false
+				s.InfoMessage = "edit canceled"
+
+				return s.mainModel, nil
+			case KeyEnter:
+				// Применим введённое значение
+				s.applyEdit()
+				s.editMode = false
+
+				return s.mainModel, nil
+			}
+		}
+
+		var cmd tea.Cmd
+		s.input, cmd = s.input.Update(msg)
+
+		return s.mainModel, cmd
+	}
+
+	// Обычный режим: выбор пунктов
+	if key, ok := msg.(tea.KeyMsg); ok {
 		switch key.String() {
 		case KeyEscape:
+			if s.IsCreate {
+				// Назад в список
+				screen := s.mainModel.screenPassList
+				s.mainModel.SetCurrentScreen(screen)
+				return s.mainModel, nil
+			}
 			s.actionBackToDetails()
-
 			return s.mainModel, nil
 
 		case KeyUp:
 			s.Index = indexPrev(s.Index)
-
 			return s.mainModel, nil
 
 		case KeyDown:
 			s.Index = indexNext(s.Index, len(s.Items))
+			return s.mainModel, nil
 
+		case KeyTab:
+			s.Index = indexSwitch(s.Index, len(s.Items))
 			return s.mainModel, nil
 
 		case KeyEnter:
-			s.enter()
-
-			return s.mainModel, nil
-
-		case KeyCopy:
-			return s.mainModel, nil
+			return s.mainModel, s.enter()
 		}
 	}
 
 	return s.mainModel, nil
 }
 
-func (s *PasswordEditScreen) enter() {
-	if s.Items[s.Index] == "Create" {
-		// logic
-		_ = s.IsCreate
+// enter — обработка выбранного пункта меню (в обычном режиме).
+func (s *PasswordEditScreen) enter() tea.Cmd {
+	if s.Item == nil {
+		return nil
 	}
 
-	if s.Items[s.Index] == "Back to details" {
+	choice := s.Items[s.Index]
+	switch choice {
+	case "Title", "Description", "Login", "Password":
+		// Для типа != login логин/пароль пропустим
+		if (choice == "Login" || choice == "Password") && s.Item.Type != service.PasswordTypeLogin {
+			s.InfoMessage = "field not available for current type"
+			return nil
+		}
+		s.startEdit(choice)
+
+		return nil
+
+	case "Type":
+		s.cycleType()
+		return nil
+
+	case "Create":
+		if !s.IsCreate {
+			return nil
+		}
+		return s.createItem()
+
+	case "Save":
+		if s.IsCreate {
+			return nil
+		}
+		return s.saveItem()
+
+	case "Remove":
+		if s.IsCreate {
+			return nil
+		}
+		// В прототипе не нужно опустим
+		s.InfoMessage = "remove not implemented"
+		return nil
+
+	case "Back to list":
+		screen := s.mainModel.screenPassList
+		s.mainModel.SetCurrentScreen(screen)
+		return nil
+
+	case "Back to details":
 		if s.IsCreate {
 			screen := s.mainModel.screenPassList
-
 			s.mainModel.SetCurrentScreen(screen)
 		} else {
 			s.actionBackToDetails()
 		}
+		return nil
 	}
 
-	if s.Items[s.Index] == "Edit" {
-		// logic
-		_ = s.IsCreate
-	}
+	return nil
+}
 
-	if s.Items[s.Index] == "Remove" {
-		// logic
-		_ = s.IsCreate
+// startEdit включает режим редактирования для поля.
+func (s *PasswordEditScreen) startEdit(field string) {
+	s.editMode = true
+	s.editField = field
+
+	// начальное значение в input
+	switch field {
+	case "Title":
+		s.input.SetValue(s.Item.Title)
+	case "Description":
+		s.input.SetValue(s.Item.Description)
+	case "Login":
+		s.input.SetValue(s.Item.Login)
+	case "Password":
+		s.input.SetValue(s.Item.Password)
+		s.input.EchoMode = textinput.EchoPassword
+		s.input.EchoCharacter = '•'
+	}
+	s.input.Focus()
+}
+
+// applyEdit применяет введённый текст к выбранному полю.
+func (s *PasswordEditScreen) applyEdit() {
+	val := s.input.Value()
+	switch s.editField {
+	case "Title":
+		s.Item.Title = val
+	case "Description":
+		s.Item.Description = val
+	case "Login":
+		s.Item.Login = val
+	case "Password":
+		s.Item.Password = val
+	}
+	s.InfoMessage = s.editField + " updated"
+	// вернуть обычный режим ввода
+	s.input.Blur()
+	s.input.EchoMode = textinput.EchoNormal
+	s.input.SetValue("")
+}
+
+// cycleType циклически меняет тип записи.
+func (s *PasswordEditScreen) cycleType() {
+	next := map[service.ItemType]service.ItemType{
+		service.PasswordTypeLogin:  service.PasswordTypeText,
+		service.PasswordTypeText:   service.PasswordTypeBinary,
+		service.PasswordTypeBinary: service.PasswordTypeCard,
+		service.PasswordTypeCard:   service.PasswordTypeLogin,
+	}
+	s.Item.Type = next[s.Item.Type]
+	s.InfoMessage = "type: " + string(s.Item.Type)
+}
+
+// createItem вызывает AddPassword при IsCreate=true.
+func (s *PasswordEditScreen) createItem() tea.Cmd {
+	item := *s.Item // копия
+	return func() tea.Msg {
+		ctx, cancelFn := context.WithCancel(context.Background())
+		defer cancelFn()
+
+		id, err := s.mainModel.service.AddPassword(ctx, item)
+		if err != nil {
+			s.InfoMessage = "create error: " + err.Error()
+			return nil
+		}
+		s.InfoMessage = "created with ID: " + id
+		// после создания — в список
+		screen := s.mainModel.screenPassList
+		s.mainModel.SetCurrentScreen(screen)
+		return nil
+	}
+}
+
+// saveItem вызывает ChangePassword при редактировании существующей записи.
+func (s *PasswordEditScreen) saveItem() tea.Cmd {
+	item := *s.Item // копия
+	return func() tea.Msg {
+		ctx, cancelFn := context.WithCancel(context.Background())
+		defer cancelFn()
+
+		if err := s.mainModel.service.ChangePassword(ctx, item); err != nil {
+			s.InfoMessage = "save error: " + err.Error()
+			return nil
+		}
+		s.InfoMessage = "saved"
+		// назад в детали
+		s.actionBackToDetails()
+		return nil
 	}
 }
 
 func (s *PasswordEditScreen) actionBackToDetails() {
 	screen := s.mainModel.screenPassDetails
-
 	screen.Item = s.Item
-
 	s.mainModel.SetCurrentScreen(screen)
+}
+
+func safeType(t service.ItemType) service.ItemType {
+	if t == "" {
+		return service.PasswordTypeLogin
+	}
+	return t
 }

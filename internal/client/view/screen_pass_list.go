@@ -15,6 +15,8 @@ type PasswordListScreen struct {
 	Index      int
 	Items      []service.Password
 	ErrMessage string
+	step       int // шаги для последовательных действий (1 - первое, 2 - второе)
+	stepMax    int // всего шагов в последовательности действий
 }
 
 // NewPasswordListScreen создаёт новый экзепляр *PasswordListScreen.
@@ -24,6 +26,8 @@ func NewPasswordListScreen(mod *MainModel) *PasswordListScreen {
 		Index:      0,
 		Items:      []service.Password{}, // + "[Add new password]"
 		ErrMessage: "",
+		step:       stepInit,
+		stepMax:    1,
 	}
 }
 
@@ -36,6 +40,8 @@ func (s *PasswordListScreen) ValidateScreenData() {
 	if s.Index > len(s.Items)-1 {
 		s.Index = len(s.Items) - 1
 	}
+
+	s.step = stepInit
 }
 
 // String выводит окно и его содержимое в виде строки.
@@ -105,7 +111,6 @@ func (s *PasswordListScreen) Update(msg tea.Msg) (*MainModel, tea.Cmd) {
 					Description: "",
 					Login:       "",
 					Password:    "",
-					Notes:       "",
 				}
 
 				s.mainModel.SetCurrentScreen(screen)
@@ -113,15 +118,93 @@ func (s *PasswordListScreen) Update(msg tea.Msg) (*MainModel, tea.Cmd) {
 				return s.mainModel, nil
 			}
 
-			screen := s.mainModel.screenPassDetails
+			ctx := context.Background()
 
-			screen.Item = &s.Items[s.Index]
+			s.initAction(ctx, s.Items[s.Index].ID)
 
-			s.mainModel.SetCurrentScreen(screen)
-
-			return s.mainModel, nil
+			return s.mainModel, s.actionCmd(ctx, s.Items[s.Index].ID)
 		}
 	}
 
 	return s.mainModel, nil
+}
+
+func (s *PasswordListScreen) initAction(inctx context.Context, passID string) {
+	ctx, cancelFn := context.WithCancel(inctx)
+
+	s.step = 0
+	s.stepMax = 1
+
+	loadScreen := s.mainModel.screenLoading
+
+	loadScreen.title = "Load secret data"
+	loadScreen.desc = "Load secret data for " + s.Items[s.Index].Title
+	loadScreen.percent = 0
+	loadScreen.status = "Send request for load secret data..."
+	loadScreen.OnProgress = func(_ float64, _ string) tea.Cmd {
+		return s.actionCmd(ctx, passID)
+	}
+	loadScreen.OnDone = func(payload any) {
+		nextScreen := s.mainModel.screenPassDetails
+
+		pass, _ := payload.(string)
+		s.Items[s.Index].Password = pass
+
+		nextScreen.Item = &s.Items[s.Index]
+
+		s.mainModel.SetCurrentScreen(nextScreen)
+	}
+
+	prevScreen := s.mainModel.screenPassList
+
+	loadScreen.OnCancel = func() {
+		cancelFn()
+
+		prevScreen.ErrMessage = textOperationCanceled
+
+		s.mainModel.SetCurrentScreen(prevScreen)
+	}
+	loadScreen.OnError = func(err error) {
+		prevScreen.ErrMessage = err.Error()
+
+		s.mainModel.SetCurrentScreen(prevScreen)
+	}
+
+	s.mainModel.SetCurrentScreen(loadScreen)
+}
+
+func (s *PasswordListScreen) actionCmd(
+	ctx context.Context,
+	passID string,
+) tea.Cmd {
+	return func() tea.Msg {
+		switch s.step {
+		case stepInit:
+			s.step = stepOne
+
+			return LoadingProgressMsg{
+				Percent: float64(s.step-1) / float64(s.stepMax),
+				Status:  "Load secret data…",
+			}
+
+		case 1:
+			data, err := s.mainModel.service.GetPassword(ctx, passID)
+			if err != nil {
+				return LoadingDoneMsg{
+					Err:     fmt.Errorf("get password info: %w", err),
+					Payload: nil,
+				}
+			}
+
+			return LoadingDoneMsg{
+				Payload: data,
+				Err:     nil,
+			}
+		}
+
+		return LoadingDoneMsg{
+			Payload: nil,
+			Err:     nil,
+		}
+	}
 }

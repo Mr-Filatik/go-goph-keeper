@@ -26,12 +26,14 @@ type LoginScreen struct {
 func NewLoginScreen(mod *MainModel) *LoginScreen {
 	// login input
 	loginInput := textinput.New()
+	loginInput.SetValue("demo")
 	loginInput.Placeholder = "your email"
 	loginInput.CharLimit = 64
 	loginInput.Focus()
 
 	// password inputs
 	passInput := textinput.New()
+	passInput.SetValue("demo")
 	passInput.Placeholder = "your password"
 	passInput.CharLimit = 64
 	passInput.EchoMode = textinput.EchoPassword
@@ -157,7 +159,7 @@ func (s *LoginScreen) initAction(inctx context.Context, login, password string) 
 	loadScreen.OnCancel = func() {
 		cancelFn()
 
-		prevScreen.ErrMessage = "operation canceled"
+		prevScreen.ErrMessage = textOperationCanceled
 
 		s.mainModel.SetCurrentScreen(prevScreen)
 	}
