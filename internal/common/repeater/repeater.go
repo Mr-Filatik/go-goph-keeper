@@ -4,7 +4,6 @@ package repeater
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 )
 
@@ -132,6 +131,8 @@ func (r *Repeater[Tin, Tout]) SetDurationLimit(dLim, dLimAll time.Duration) *Rep
 //
 // Параметры:
 //   - data: данные
+//
+//nolint:funlen
 func (r *Repeater[Tin, Tout]) Run(
 	parent context.Context,
 	data Tin,
@@ -179,16 +180,22 @@ func (r *Repeater[Tin, Tout]) Run(
 			notifyRetry(retryCh, attempt+1, prevErr, wait)
 
 			// Ждём или отменяемся
-			if err := waitOrCancel(ctx, wait); err != nil {
-				doneCh <- DoneEvent[Tout]{Result: zero, Err: err}
+			timer := time.NewTimer(wait)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				doneCh <- DoneEvent[Tout]{
+					Result: zero,
+					Err:    ctx.Err(),
+				}
 
 				return
-			}
-
-			// Следующая попытка
-			done, prevErr = r.attemptAndMaybeFinish(ctx, data, doneCh)
-			if done {
-				return
+			case <-timer.C:
+				// Следующая попытка
+				done, prevErr = r.attemptAndMaybeFinish(ctx, data, doneCh)
+				if done {
+					return
+				}
 			}
 		}
 
@@ -235,19 +242,6 @@ func notifyRetry(ch chan<- RetryEvent, attempt int, err error, wait time.Duratio
 	select {
 	case ch <- RetryEvent{Attempt: attempt, Err: err, Wait: wait}:
 	default:
-	}
-}
-
-// waitOrCancel ждёт интервал или возвращает ошибку отмены/дедлайна.
-func waitOrCancel(ctx context.Context, d time.Duration) error {
-	timer := time.NewTimer(d)
-	defer timer.Stop()
-
-	select {
-	case <-ctx.Done():
-		return fmt.Errorf("cancel: %w", ctx.Err())
-	case <-timer.C:
-		return nil
 	}
 }
 
